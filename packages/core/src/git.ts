@@ -872,7 +872,9 @@ const layer = Layer.effect(
         operation,
         directory: worktreeDirectory,
         message,
-        forceRequired: operation === "remove" && /contains modified or untracked files|is dirty/i.test(message),
+        forceRequired:
+          operation === "remove" &&
+          (/(?:--force|-f)\b/i.test(message) || /contains modified or untracked files|is dirty/i.test(message)),
       })
     })
 

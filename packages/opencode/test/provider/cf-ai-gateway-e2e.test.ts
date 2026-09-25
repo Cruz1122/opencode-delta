@@ -103,8 +103,10 @@ beforeEach(() => {
     }
     return realFetch(input, init)
   }
-  // `typeof fetch` includes Bun's `preconnect` method; preserve it from realFetch.
-  const stubFetch: typeof fetch = Object.assign(handle, { preconnect: realFetch.preconnect.bind(realFetch) })
+  // Preserve Bun's `preconnect` method when the runtime provides it; older Bun versions need a no-op fallback.
+  const stubFetch: typeof fetch = Object.assign(handle, {
+    preconnect: realFetch.preconnect?.bind(realFetch) ?? (() => {}),
+  })
   globalThis.fetch = stubFetch
 })
 
