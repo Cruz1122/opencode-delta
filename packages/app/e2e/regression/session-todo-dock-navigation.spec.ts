@@ -75,7 +75,6 @@ test("animates todo lifecycle without replaying it across session tabs", async (
   events.push(statusEvent(sourceID, "busy"))
   await expect(page.getByRole("button", { name: "Stop" })).toBeVisible()
 
-  await page.waitForTimeout(700)
   const opening = sampleDock(page, 1_000)
   todos[sourceID] = activeTodos
   events.push(todoEvent(sourceID, activeTodos))
@@ -86,7 +85,7 @@ test("animates todo lifecycle without replaying it across session tabs", async (
   await switchSession(page, otherID, otherTitle)
   await expect(dock).toHaveCount(0)
 
-  const returningOpen = sampleDock(page, 700)
+  const returningOpen = sampleDockUntilSettled(page)
   await switchSession(page, sourceID, sourceTitle)
   const openSamples = (await returningOpen).filter((sample) => sample.present)
   expect(openSamples.length).toBeGreaterThan(0)
@@ -187,4 +186,27 @@ function sampleDock(page: Page, duration: number) {
     }
     return samples
   }, duration)
+}
+
+function sampleDockUntilSettled(page: Page, timeout = 10_000) {
+  return page.evaluate(async (timeout) => {
+    const samples: { present: boolean; height: number; opacity: number }[] = []
+    const deadline = performance.now() + timeout
+    let settledFrames = 0
+    while (performance.now() < deadline) {
+      const dock = document.querySelector<HTMLElement>('[data-component="session-todo-dock"]')
+      const clip = dock?.parentElement?.parentElement
+      const label = dock?.querySelector<HTMLElement>('[data-action="session-todo-toggle"] span[aria-label]')
+      const sample = {
+        present: !!dock,
+        height: clip?.getBoundingClientRect().height ?? 0,
+        opacity: label ? Number.parseFloat(getComputedStyle(label).opacity) : 0,
+      }
+      samples.push(sample)
+      settledFrames = sample.present && sample.opacity > 0.98 && sample.height > 70 ? settledFrames + 1 : 0
+      if (settledFrames >= 2) return samples
+      await new Promise(requestAnimationFrame)
+    }
+    return samples
+  }, timeout)
 }

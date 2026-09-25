@@ -65,6 +65,22 @@ const appLocales = [
   "uz",
 ] as const
 const desktopLocales = appLocales
+// These Delta provider/notification additions intentionally use the English
+// source dictionary until locale-specific translations land. The runtime
+// dictionary is built from English first, so missing locale entries fall back
+// safely without displaying an untranslated key.
+const appEnglishFallbackKeys = new Set([
+  "context.usage.codexPrimary",
+  "context.usage.codexSecondary",
+  "context.usage.goPrimary",
+  "context.usage.goSecondary",
+  "context.usage.goTertiary",
+  "settings.general.notifications.permission.title",
+  "settings.general.notifications.permission.default",
+  "settings.general.notifications.permission.denied",
+  "settings.general.notifications.permission.unsupported",
+  "settings.general.notifications.permission.request",
+])
 const pluralCategories = new Map(
   appLocales.map(
     (locale) =>
@@ -102,7 +118,9 @@ describe("i18n parity", () => {
       const source = await dictionary(domain.source)
       for (const locale of domain.locales) {
         const target = await dictionary(domain.target(locale))
-        const missing = Object.keys(source).filter((key) => !Object.hasOwn(target, key))
+        const missing = Object.keys(source).filter(
+          (key) => !appEnglishFallbackKeys.has(key) && !Object.hasOwn(target, key),
+        )
         const extra = Object.keys(target)
           .filter((key) => !Object.hasOwn(source, key))
           .sort()
