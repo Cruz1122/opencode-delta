@@ -13,9 +13,10 @@ export type ExecResult = {
 
 export async function exec(command: string, cwd: string, timeoutMs = 600_000): Promise<ExecResult> {
   const started = Date.now()
-  const shell = process.env.SHELL?.includes("fish") ? process.env.SHELL : "fish"
+  const shell = process.platform === "win32" ? process.env.ComSpec ?? "cmd.exe" : process.env.SHELL ?? "/bin/sh"
+  const shellArgs = process.platform === "win32" ? ["/d", "/s", "/c", command] : ["-lc", command]
   return await new Promise((resolve) => {
-    const child = spawn(shell, ["-lc", command], { cwd, env: process.env, stdio: ["ignore", "pipe", "pipe"] })
+    const child = spawn(shell, shellArgs, { cwd, env: process.env, stdio: ["ignore", "pipe", "pipe"] })
     let stdout = ""
     let stderr = ""
     child.stdout.on("data", (chunk) => { stdout += String(chunk) })

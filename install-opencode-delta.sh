@@ -9,6 +9,11 @@ usage() {
   cat <<'EOF'
 OpenCode Delta installer
 
+This source installer is for local development and requires Bun and Python.
+For normal users, use the prebuilt release installer instead:
+
+  curl -fsSL https://raw.githubusercontent.com/Cruz1122/opencode-delta/dev/install.sh | sh
+
 Usage:
   ./install-opencode-delta.sh                 Install the custom OpenCode build + suite.
   ./install-opencode-delta.sh --codex         Install OpenCode plus the Codex/ChatGPT adapter.
