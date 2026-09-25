@@ -973,8 +973,10 @@ export const dict = {
   "settings.general.notifications.errors.title": "أخطاء",
   "settings.general.notifications.errors.description": "عرض إشعار النظام عند حدوث خطأ",
   "settings.general.notifications.permission.title": "إذن النظام",
-  "settings.general.notifications.permission.default": "اسمح بإشعارات النظام لتصلك التنبيهات عندما يكون OpenCode في الخلفية",
-  "settings.general.notifications.permission.denied": "إشعارات النظام محظورة. فعّلها في المتصفح أو إعدادات نظام التشغيل.",
+  "settings.general.notifications.permission.default":
+    "اسمح بإشعارات النظام لتصلك التنبيهات عندما يكون OpenCode في الخلفية",
+  "settings.general.notifications.permission.denied":
+    "إشعارات النظام محظورة. فعّلها في المتصفح أو إعدادات نظام التشغيل.",
   "settings.general.notifications.permission.unsupported": "إشعارات النظام غير متاحة في هذه البيئة",
   "settings.general.notifications.permission.request": "السماح بالإشعارات",
   "settings.general.sounds.agent.title": "وكيل",
