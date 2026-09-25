@@ -8,10 +8,7 @@ import { useToast } from "../ui/toast"
 import { useProject } from "./project"
 import { useKV } from "./kv"
 
-function sessionLineage(
-  sessions: { id: string; parentID?: string }[],
-  sessionID: string,
-) {
+function sessionLineage(sessions: { id: string; parentID?: string }[], sessionID: string) {
   const parent = sessions.reduce((acc, item) => {
     if (item.parentID) acc.set(item.id, item.parentID)
     return acc

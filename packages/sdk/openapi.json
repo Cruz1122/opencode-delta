@@ -5106,6 +5106,68 @@
         ]
       }
     },
+    "/provider/{providerID}/usage": {
+      "get": {
+        "tags": ["provider"],
+        "operationId": "provider.usage",
+        "parameters": [
+          {
+            "name": "providerID",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider usage snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderUsageSnapshot"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Retrieve subscription usage limits for a provider when available (ChatGPT Codex or OpenCode Go).",
+        "summary": "Get provider usage",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.provider.usage({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/provider/{providerID}/oauth/authorize": {
       "post": {
         "tags": ["provider"],
@@ -15483,6 +15545,9 @@
             "$ref": "#/components/schemas/EventProjectUpdated"
           },
           {
+            "$ref": "#/components/schemas/EventProviderUsage"
+          },
+          {
             "$ref": "#/components/schemas/EventSessionStatus"
           },
           {
@@ -17262,6 +17327,143 @@
           }
         },
         "required": ["content", "status", "priority"],
+        "additionalProperties": false
+      },
+      "ProviderUsageWindow": {
+        "type": "object",
+        "properties": {
+          "usedPercent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity", "-Infinity", "NaN"]
+              }
+            ]
+          },
+          "windowMinutes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity", "-Infinity", "NaN"]
+              }
+            ]
+          },
+          "resetsAt": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity", "-Infinity", "NaN"]
+              }
+            ]
+          }
+        },
+        "required": ["usedPercent"],
+        "additionalProperties": false
+      },
+      "ProviderUsageCredits": {
+        "type": "object",
+        "properties": {
+          "hasCredits": {
+            "type": "boolean"
+          },
+          "unlimited": {
+            "type": "boolean"
+          },
+          "balance": {
+            "type": "string"
+          }
+        },
+        "required": ["hasCredits", "unlimited"],
+        "additionalProperties": false
+      },
+      "ProviderUsageSnapshot": {
+        "type": "object",
+        "properties": {
+          "providerID": {
+            "type": "string"
+          },
+          "primary": {
+            "$ref": "#/components/schemas/ProviderUsageWindow"
+          },
+          "secondary": {
+            "$ref": "#/components/schemas/ProviderUsageWindow"
+          },
+          "tertiary": {
+            "$ref": "#/components/schemas/ProviderUsageWindow"
+          },
+          "credits": {
+            "$ref": "#/components/schemas/ProviderUsageCredits"
+          },
+          "capturedAt": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity", "-Infinity", "NaN"]
+              }
+            ]
+          }
+        },
+        "required": ["providerID", "capturedAt"],
         "additionalProperties": false
       },
       "SessionStatus": {
@@ -20043,6 +20245,34 @@
                   },
                   "type": {
                     "type": "string",
+                    "enum": ["provider.usage"]
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "providerID": {
+                        "type": "string"
+                      },
+                      "usage": {
+                        "$ref": "#/components/schemas/ProviderUsageSnapshot"
+                      }
+                    },
+                    "required": ["providerID", "usage"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["id", "type", "properties"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^evt_"
+                  },
+                  "type": {
+                    "type": "string",
                     "enum": ["session.status"]
                   },
                   "properties": {
@@ -21281,6 +21511,9 @@
             "type": "string"
           },
           "small_model": {
+            "type": "string"
+          },
+          "subagent_model": {
             "type": "string"
           },
           "default_agent": {
@@ -23849,6 +24082,239 @@
           }
         ]
       },
+      "ProviderUsageWindow3": {
+        "type": "object",
+        "properties": {
+          "usedPercent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              }
+            ]
+          },
+          "windowMinutes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              }
+            ]
+          },
+          "resetsAt": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              }
+            ]
+          }
+        },
+        "required": ["usedPercent"],
+        "additionalProperties": false
+      },
+      "ProviderUsageWindow4": {
+        "type": "object",
+        "properties": {
+          "usedPercent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              }
+            ]
+          },
+          "windowMinutes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              }
+            ]
+          },
+          "resetsAt": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              }
+            ]
+          }
+        },
+        "required": ["usedPercent"],
+        "additionalProperties": false
+      },
+      "ProviderUsageWindow5": {
+        "type": "object",
+        "properties": {
+          "usedPercent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              }
+            ]
+          },
+          "windowMinutes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              }
+            ]
+          },
+          "resetsAt": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              }
+            ]
+          }
+        },
+        "required": ["usedPercent"],
+        "additionalProperties": false
+      },
+      "ProviderUsageSnapshot1": {
+        "type": "object",
+        "properties": {
+          "providerID": {
+            "type": "string"
+          },
+          "primary": {
+            "$ref": "#/components/schemas/ProviderUsageWindow3"
+          },
+          "secondary": {
+            "$ref": "#/components/schemas/ProviderUsageWindow4"
+          },
+          "tertiary": {
+            "$ref": "#/components/schemas/ProviderUsageWindow5"
+          },
+          "credits": {
+            "$ref": "#/components/schemas/ProviderUsageCredits"
+          },
+          "capturedAt": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              }
+            ]
+          }
+        },
+        "required": ["providerID", "capturedAt"],
+        "additionalProperties": false
+      },
       "session.status": {
         "type": "object",
         "properties": {
@@ -24235,6 +24701,9 @@
             "$ref": "#/components/schemas/ProjectUpdated"
           },
           {
+            "$ref": "#/components/schemas/ProviderUsage"
+          },
+          {
             "$ref": "#/components/schemas/session.status"
           },
           {
@@ -24470,6 +24939,239 @@
           }
         },
         "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "ProviderUsageWindow6": {
+        "type": "object",
+        "properties": {
+          "usedPercent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              }
+            ]
+          },
+          "windowMinutes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              }
+            ]
+          },
+          "resetsAt": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              }
+            ]
+          }
+        },
+        "required": ["usedPercent"],
+        "additionalProperties": false
+      },
+      "ProviderUsageWindow7": {
+        "type": "object",
+        "properties": {
+          "usedPercent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              }
+            ]
+          },
+          "windowMinutes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              }
+            ]
+          },
+          "resetsAt": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              }
+            ]
+          }
+        },
+        "required": ["usedPercent"],
+        "additionalProperties": false
+      },
+      "ProviderUsageWindow8": {
+        "type": "object",
+        "properties": {
+          "usedPercent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              }
+            ]
+          },
+          "windowMinutes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              }
+            ]
+          },
+          "resetsAt": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              }
+            ]
+          }
+        },
+        "required": ["usedPercent"],
+        "additionalProperties": false
+      },
+      "ProviderUsageSnapshot2": {
+        "type": "object",
+        "properties": {
+          "providerID": {
+            "type": "string"
+          },
+          "primary": {
+            "$ref": "#/components/schemas/ProviderUsageWindow6"
+          },
+          "secondary": {
+            "$ref": "#/components/schemas/ProviderUsageWindow7"
+          },
+          "tertiary": {
+            "$ref": "#/components/schemas/ProviderUsageWindow8"
+          },
+          "credits": {
+            "$ref": "#/components/schemas/ProviderUsageCredits"
+          },
+          "capturedAt": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              }
+            ]
+          }
+        },
+        "required": ["providerID", "capturedAt"],
         "additionalProperties": false
       },
       "CredentialValue": {
@@ -33181,6 +33883,56 @@
         "required": ["id", "type", "data"],
         "additionalProperties": false
       },
+      "ProviderUsage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["provider.usage"]
+          },
+          "durable": {
+            "type": "object",
+            "properties": {
+              "aggregateID": {
+                "type": "string"
+              },
+              "seq": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["aggregateID", "seq", "version"],
+            "additionalProperties": false
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationRef"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "providerID": {
+                "type": "string"
+              },
+              "usage": {
+                "$ref": "#/components/schemas/ProviderUsageSnapshot1"
+              }
+            },
+            "required": ["providerID", "usage"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "data"],
+        "additionalProperties": false
+      },
       "SessionIdle": {
         "type": "object",
         "properties": {
@@ -36302,6 +37054,34 @@
               }
             },
             "required": ["id", "worktree", "time", "sandboxes"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventProviderUsage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["provider.usage"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "providerID": {
+                "type": "string"
+              },
+              "usage": {
+                "$ref": "#/components/schemas/ProviderUsageSnapshot2"
+              }
+            },
+            "required": ["providerID", "usage"],
             "additionalProperties": false
           }
         },

@@ -39,7 +39,13 @@ export function formatTranscript(
   for (const msg of messages.toSorted(
     (a, b) => a.info.time.created - b.info.time.created || a.info.id.localeCompare(b.info.id),
   )) {
-    transcript += formatMessage(msg.info, msg.parts, options, providers, messages.map((item) => item.info))
+    transcript += formatMessage(
+      msg.info,
+      msg.parts,
+      options,
+      providers,
+      messages.map((item) => item.info),
+    )
     transcript += `---\n\n`
   }
 
@@ -80,9 +86,11 @@ export function formatAssistantHeader(
 
   const user = messages?.find((item) => item.role === "user" && item.id === msg.parentID)
   const durationMs =
-    user?.time && msg.time.completed ? msg.time.completed - user.time.created : msg.time.completed
-      ? msg.time.completed - msg.time.created
-      : 0
+    user?.time && msg.time.completed
+      ? msg.time.completed - user.time.created
+      : msg.time.completed
+        ? msg.time.completed - msg.time.created
+        : 0
 
   const modelName = Model.name(providers, msg.providerID, msg.modelID)
   const parts = [`${Locale.titlecase(msg.agent)} · ${modelName}`]

@@ -101,7 +101,10 @@ await fs.rm(stageRoot, { recursive: true, force: true })
 console.log(`Packaged ${Object.keys(artifacts).length} OpenCode Delta artifacts in ${output}`)
 
 async function fileExists(filePath: string) {
-  return fs.access(filePath).then(() => true).catch(() => false)
+  return fs
+    .access(filePath)
+    .then(() => true)
+    .catch(() => false)
 }
 
 async function firstExisting(filePaths: string[]) {

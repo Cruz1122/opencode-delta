@@ -36,16 +36,19 @@ export async function GET(input: APIEvent) {
         ),
       )
       .innerJoin(WorkspaceTable, and(eq(WorkspaceTable.id, KeyTable.workspaceID), isNull(WorkspaceTable.timeDeleted)))
-      .innerJoin(BillingTable, and(eq(BillingTable.workspaceID, KeyTable.workspaceID), isNull(BillingTable.timeDeleted)))
+      .innerJoin(
+        BillingTable,
+        and(eq(BillingTable.workspaceID, KeyTable.workspaceID), isNull(BillingTable.timeDeleted)),
+      )
       .where(and(eq(KeyTable.key, apiKey), isNull(KeyTable.timeDeleted)))
       .then((rows) => rows[0]),
   )
 
   if (!auth) {
-    return new Response(
-      JSON.stringify({ type: "error", error: { type: "AuthError", message: "Unauthorized" } }),
-      { status: 401, headers: { "Content-Type": "application/json" } },
-    )
+    return new Response(JSON.stringify({ type: "error", error: { type: "AuthError", message: "Unauthorized" } }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    })
   }
 
   const row = await Database.use((tx) =>
@@ -72,7 +75,10 @@ export async function GET(input: APIEvent) {
 
   if (!row) {
     return new Response(
-      JSON.stringify({ type: "error", error: { type: "EntitlementError", message: "OpenCode Go subscription required." } }),
+      JSON.stringify({
+        type: "error",
+        error: { type: "EntitlementError", message: "OpenCode Go subscription required." },
+      }),
       { status: 403, headers: { "Content-Type": "application/json" } },
     )
   }
@@ -81,9 +87,29 @@ export async function GET(input: APIEvent) {
   return new Response(
     JSON.stringify({
       usage: {
-        rolling: formatUsage(Subscription.analyzeRollingUsage({ limit: limits.rollingLimit, window: limits.rollingWindow, usage: row.rollingUsage ?? 0, timeUpdated: row.timeRollingUpdated ?? new Date() })),
-        weekly: formatUsage(Subscription.analyzeWeeklyUsage({ limit: limits.weeklyLimit, usage: row.weeklyUsage ?? 0, timeUpdated: row.timeWeeklyUpdated ?? new Date() })),
-        monthly: formatUsage(Subscription.analyzeMonthlyUsage({ limit: limits.monthlyLimit, usage: row.monthlyUsage ?? 0, timeUpdated: row.timeMonthlyUpdated ?? new Date(), timeSubscribed: row.timeCreated })),
+        rolling: formatUsage(
+          Subscription.analyzeRollingUsage({
+            limit: limits.rollingLimit,
+            window: limits.rollingWindow,
+            usage: row.rollingUsage ?? 0,
+            timeUpdated: row.timeRollingUpdated ?? new Date(),
+          }),
+        ),
+        weekly: formatUsage(
+          Subscription.analyzeWeeklyUsage({
+            limit: limits.weeklyLimit,
+            usage: row.weeklyUsage ?? 0,
+            timeUpdated: row.timeWeeklyUpdated ?? new Date(),
+          }),
+        ),
+        monthly: formatUsage(
+          Subscription.analyzeMonthlyUsage({
+            limit: limits.monthlyLimit,
+            usage: row.monthlyUsage ?? 0,
+            timeUpdated: row.timeMonthlyUpdated ?? new Date(),
+            timeSubscribed: row.timeCreated,
+          }),
+        ),
       },
     }),
     { status: 200, headers: { "Content-Type": "application/json" } },
@@ -91,5 +117,9 @@ export async function GET(input: APIEvent) {
 }
 
 function formatUsage(usage: { status: "ok" | "rate-limited"; resetInSec: number; usagePercent: number }) {
-  return { status: usage.status, percent: usage.usagePercent, resetsAt: new Date(Date.now() + usage.resetInSec * 1000).toISOString() }
+  return {
+    status: usage.status,
+    percent: usage.usagePercent,
+    resetsAt: new Date(Date.now() + usage.resetInSec * 1000).toISOString(),
+  }
 }

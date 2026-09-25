@@ -42,9 +42,21 @@ describe("message-tokens", () => {
         agent: "build",
         model: { providerID: "anthropic", modelID: "claude-sonnet" },
       },
-      assistant({ id: "asst_1", parentID: "user_1", tokens: { input: 100, output: 20, reasoning: 0, cache: { read: 0, write: 0 } } }),
-      assistant({ id: "asst_2", parentID: "user_1", tokens: { input: 50, output: 30, reasoning: 5, cache: { read: 10, write: 5 } } }),
-      assistant({ id: "asst_3", parentID: "user_2", tokens: { input: 999, output: 999, reasoning: 0, cache: { read: 0, write: 0 } } }),
+      assistant({
+        id: "asst_1",
+        parentID: "user_1",
+        tokens: { input: 100, output: 20, reasoning: 0, cache: { read: 0, write: 0 } },
+      }),
+      assistant({
+        id: "asst_2",
+        parentID: "user_1",
+        tokens: { input: 50, output: 30, reasoning: 5, cache: { read: 10, write: 5 } },
+      }),
+      assistant({
+        id: "asst_3",
+        parentID: "user_2",
+        tokens: { input: 999, output: 999, reasoning: 0, cache: { read: 0, write: 0 } },
+      }),
     ]
 
     expect(turnAssistants(messages, "user_1")).toHaveLength(2)
@@ -95,10 +107,7 @@ describe("message-tokens", () => {
   })
 
   test("formatTokenDetail omits cache when both are zero", () => {
-    const stats = buildTokenStats(
-      { input: 100, output: 50, reasoning: 0, cache: { read: 0, write: 0 } },
-      5000,
-    )!
+    const stats = buildTokenStats({ input: 100, output: 50, reasoning: 0, cache: { read: 0, write: 0 } }, 5000)!
     expect(formatTokenDetail(stats)).toBe("150 tokens ↓ 100, ↑ 50")
   })
 
@@ -111,8 +120,6 @@ describe("message-tokens", () => {
   })
 
   test("buildTokenStats returns undefined when total is zero", () => {
-    expect(
-      buildTokenStats({ input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } }, 1000),
-    ).toBeUndefined()
+    expect(buildTokenStats({ input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } }, 1000)).toBeUndefined()
   })
 })

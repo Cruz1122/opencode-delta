@@ -13,14 +13,18 @@ export type ExecResult = {
 
 export async function exec(command: string, cwd: string, timeoutMs = 600_000): Promise<ExecResult> {
   const started = Date.now()
-  const shell = process.platform === "win32" ? process.env.ComSpec ?? "cmd.exe" : process.env.SHELL ?? "/bin/sh"
+  const shell = process.platform === "win32" ? (process.env.ComSpec ?? "cmd.exe") : (process.env.SHELL ?? "/bin/sh")
   const shellArgs = process.platform === "win32" ? ["/d", "/s", "/c", command] : ["-lc", command]
   return await new Promise((resolve) => {
     const child = spawn(shell, shellArgs, { cwd, env: process.env, stdio: ["ignore", "pipe", "pipe"] })
     let stdout = ""
     let stderr = ""
-    child.stdout.on("data", (chunk) => { stdout += String(chunk) })
-    child.stderr.on("data", (chunk) => { stderr += String(chunk) })
+    child.stdout.on("data", (chunk) => {
+      stdout += String(chunk)
+    })
+    child.stderr.on("data", (chunk) => {
+      stderr += String(chunk)
+    })
     const timer = setTimeout(() => child.kill("SIGTERM"), timeoutMs)
     let timedOut = false
     timer.unref?.()
@@ -31,7 +35,14 @@ export async function exec(command: string, cwd: string, timeoutMs = 600_000): P
     })
     child.on("error", (error) => {
       clearTimeout(timer)
-      resolve({ command, exitCode: null, stdout, stderr: `${stderr}\n${error.message}`.trim(), timedOut, durationMs: Date.now() - started })
+      resolve({
+        command,
+        exitCode: null,
+        stdout,
+        stderr: `${stderr}\n${error.message}`.trim(),
+        timedOut,
+        durationMs: Date.now() - started,
+      })
     })
   })
 }
@@ -55,11 +66,17 @@ export function stripJsonComments(input: string): string {
     const c = input[i]
     const n = input[i + 1]
     if (lineComment) {
-      if (c === "\n") { lineComment = false; out += c }
+      if (c === "\n") {
+        lineComment = false
+        out += c
+      }
       continue
     }
     if (blockComment) {
-      if (c === "*" && n === "/") { blockComment = false; i++ }
+      if (c === "*" && n === "/") {
+        blockComment = false
+        i++
+      }
       continue
     }
     if (inString) {
@@ -69,9 +86,21 @@ export function stripJsonComments(input: string): string {
       else if (c === '"') inString = false
       continue
     }
-    if (c === '"') { inString = true; out += c; continue }
-    if (c === "/" && n === "/") { lineComment = true; i++; continue }
-    if (c === "/" && n === "*") { blockComment = true; i++; continue }
+    if (c === '"') {
+      inString = true
+      out += c
+      continue
+    }
+    if (c === "/" && n === "/") {
+      lineComment = true
+      i++
+      continue
+    }
+    if (c === "/" && n === "*") {
+      blockComment = true
+      i++
+      continue
+    }
     out += c
   }
   return out.replace(/,\s*([}\]])/g, "$1")
@@ -81,7 +110,7 @@ export async function readJsonc(file: string): Promise<any> {
   return JSON.parse(stripJsonComments(await fs.readFile(file, "utf8")))
 }
 
-export function parseFrontmatter(text: string): { meta: Record<string, any>, body: string } {
+export function parseFrontmatter(text: string): { meta: Record<string, any>; body: string } {
   if (!text.startsWith("---\n")) return { meta: {}, body: text }
   const end = text.indexOf("\n---\n", 4)
   if (end < 0) return { meta: {}, body: text }

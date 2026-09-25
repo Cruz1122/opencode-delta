@@ -22,7 +22,9 @@ export function DialogModel(props: {
 
   const connected = useConnected()
   const providerOptions = createDialogProviderOptions()
-  const modelProviders = createMemo(() => (sync.data.provider.length ? sync.data.provider : sync.data.provider_next.all))
+  const modelProviders = createMemo(() =>
+    sync.data.provider.length ? sync.data.provider : sync.data.provider_next.all,
+  )
 
   const showExtra = createMemo(() => connected() && !props.providerID)
 

@@ -18,7 +18,9 @@ const server = Bun.serve({
     const malicious = new URL(request.url).pathname.includes("/malicious")
     const selectedChecksum = malicious ? maliciousChecksum : checksum
     const selectedArchive = malicious ? maliciousBytes : archiveBytes
-    return new Response(new URL(request.url).pathname.endsWith(".sha256") ? `${selectedChecksum}  fixture.tar.gz\n` : selectedArchive)
+    return new Response(
+      new URL(request.url).pathname.endsWith(".sha256") ? `${selectedChecksum}  fixture.tar.gz\n` : selectedArchive,
+    )
   },
 })
 
@@ -128,7 +130,10 @@ async function runInstaller(
     PATH: process.env.PATH,
   }
   const processHandle = Bun.spawn(["sh", path.join(root, "install.sh")], { cwd: root, env })
-  const [stdout, stderr] = await Promise.all([new Response(processHandle.stdout).text(), new Response(processHandle.stderr).text()])
+  const [stdout, stderr] = await Promise.all([
+    new Response(processHandle.stdout).text(),
+    new Response(processHandle.stderr).text(),
+  ])
   return { exitCode: await processHandle.exited, stdout, stderr }
 }
 
@@ -161,7 +166,7 @@ async function makeFixture() {
     '    case "$1" in',
     '      --source) source="$2"; shift 2;;',
     '      --target) target="$2"; shift 2;;',
-    '      *) shift;;',
+    "      *) shift;;",
     "    esac",
     "  done",
     '  mkdir -p "$(dirname "$target")"',
@@ -177,7 +182,10 @@ async function makeFixture() {
   await fs.writeFile(path.join(suite, "AGENTS.md"), "delta agents\n")
   await fs.writeFile(path.join(suite, "package.json"), '{"name":"opencode-delta"}\n')
   await fs.writeFile(path.join(suite, "skills", "fixture", "SKILL.md"), "# fixture\n")
-  await fs.writeFile(path.join(stage, "delta-bundle.json"), '{"version":"test","target":"linux-x64","mascot":true,"autopilot":true}\n')
+  await fs.writeFile(
+    path.join(stage, "delta-bundle.json"),
+    '{"version":"test","target":"linux-x64","mascot":true,"autopilot":true}\n',
+  )
   await fs.mkdir(path.join(stage, "assets"), { recursive: true })
   await fs.writeFile(path.join(stage, "assets", "mascot.svg"), "<svg />\n")
   await runCommand(["tar", "-czf", archive, "-C", stage, "."])

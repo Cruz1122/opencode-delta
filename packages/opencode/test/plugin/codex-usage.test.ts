@@ -149,16 +149,10 @@ describe("codex-usage", () => {
     globalThis.fetch = fetchMock
 
     expect(
-      maybeScheduleUsagePoll(
-        { access: "token", accountId: "acc" },
-        { minIntervalMs: USAGE_POLL_MIN_INTERVAL_MS },
-      ),
+      maybeScheduleUsagePoll({ access: "token", accountId: "acc" }, { minIntervalMs: USAGE_POLL_MIN_INTERVAL_MS }),
     ).toBe(true)
     expect(
-      maybeScheduleUsagePoll(
-        { access: "token", accountId: "acc" },
-        { minIntervalMs: USAGE_POLL_MIN_INTERVAL_MS },
-      ),
+      maybeScheduleUsagePoll({ access: "token", accountId: "acc" }, { minIntervalMs: USAGE_POLL_MIN_INTERVAL_MS }),
     ).toBe(false)
 
     await Bun.sleep(20)
@@ -166,10 +160,7 @@ describe("codex-usage", () => {
 
     __setStateForTest({ lastPollAt: Date.now() - USAGE_POLL_MIN_INTERVAL_MS - 1, pollInflight: false })
     expect(
-      maybeScheduleUsagePoll(
-        { access: "token", accountId: "acc" },
-        { minIntervalMs: USAGE_POLL_MIN_INTERVAL_MS },
-      ),
+      maybeScheduleUsagePoll({ access: "token", accountId: "acc" }, { minIntervalMs: USAGE_POLL_MIN_INTERVAL_MS }),
     ).toBe(true)
     await Bun.sleep(20)
     expect(fetchMock).toHaveBeenCalledTimes(2)

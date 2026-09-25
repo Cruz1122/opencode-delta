@@ -46,8 +46,7 @@ export function parseWindowFromUsageJson(win: unknown): Window | undefined {
   if (!Number.isFinite(used)) return undefined
 
   const secs = record.limit_window_seconds
-  const windowMinutes =
-    typeof secs === "number" && secs > 0 ? Math.floor((secs + 59) / 60) : undefined
+  const windowMinutes = typeof secs === "number" && secs > 0 ? Math.floor((secs + 59) / 60) : undefined
   const resetsAt = typeof record.reset_at === "number" ? record.reset_at : undefined
 
   return {
@@ -60,7 +59,8 @@ export function parseWindowFromUsageJson(win: unknown): Window | undefined {
 export function parseUsagePayload(payload: unknown): Omit<Snapshot, "providerID" | "capturedAt"> | undefined {
   if (!payload || typeof payload !== "object") return undefined
   const record = payload as Record<string, unknown>
-  const rateLimit = record.rate_limit && typeof record.rate_limit === "object" ? (record.rate_limit as Record<string, unknown>) : {}
+  const rateLimit =
+    record.rate_limit && typeof record.rate_limit === "object" ? (record.rate_limit as Record<string, unknown>) : {}
   const primary = parseWindowFromUsageJson(rateLimit.primary_window)
   const secondary = parseWindowFromUsageJson(rateLimit.secondary_window)
 
@@ -136,7 +136,9 @@ function parseHeaderWindow(headers: Record<string, string>, which: "primary" | "
   }
 }
 
-export function parseRateLimitHeaders(headers: Headers | Record<string, string>): Omit<Snapshot, "providerID" | "capturedAt"> | undefined {
+export function parseRateLimitHeaders(
+  headers: Headers | Record<string, string>,
+): Omit<Snapshot, "providerID" | "capturedAt"> | undefined {
   const map = headerMap(headers)
   const primary = parseHeaderWindow(map, "primary")
   const secondary = parseHeaderWindow(map, "secondary")
@@ -262,9 +264,11 @@ export function formatWindow(window: Window | undefined) {
 
 export function formatSnapshot(snapshot: Snapshot | undefined) {
   if (!snapshot) return undefined
-  return [formatWindow(snapshot.primary), formatWindow(snapshot.secondary), formatWindow(snapshot.tertiary)]
-    .filter(Boolean)
-    .join(" · ") || undefined
+  return (
+    [formatWindow(snapshot.primary), formatWindow(snapshot.secondary), formatWindow(snapshot.tertiary)]
+      .filter(Boolean)
+      .join(" · ") || undefined
+  )
 }
 
 /** @internal test helpers */

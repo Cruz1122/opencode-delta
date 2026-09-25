@@ -21,11 +21,13 @@ export function formatProviderUsageWindow(window: ProviderUsageWindow | undefine
 
 export function formatProviderUsage(snapshot: ProviderUsageSnapshot | undefined) {
   if (!snapshot) return undefined
-  return [
-    formatProviderUsageWindow(snapshot.primary),
-    formatProviderUsageWindow(snapshot.secondary),
-    formatProviderUsageWindow(snapshot.tertiary),
-  ]
-    .filter(Boolean)
-    .join(" · ") || undefined
+  return (
+    [
+      formatProviderUsageWindow(snapshot.primary),
+      formatProviderUsageWindow(snapshot.secondary),
+      formatProviderUsageWindow(snapshot.tertiary),
+    ]
+      .filter(Boolean)
+      .join(" · ") || undefined
+  )
 }

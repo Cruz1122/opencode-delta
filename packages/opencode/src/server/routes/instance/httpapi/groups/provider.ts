@@ -64,7 +64,8 @@ export const ProviderApi = HttpApi.make("provider")
           OpenApi.annotations({
             identifier: "provider.usage",
             summary: "Get provider usage",
-            description: "Retrieve subscription usage limits for a provider when available (ChatGPT Codex or OpenCode Go).",
+            description:
+              "Retrieve subscription usage limits for a provider when available (ChatGPT Codex or OpenCode Go).",
           }),
         ),
         HttpApiEndpoint.post("authorize", `${root}/:providerID/oauth/authorize`, {

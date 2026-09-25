@@ -770,7 +770,7 @@ export function Logo(props: { shape?: LogoShape; ink?: RGBA; idle?: boolean } = 
       if (char === "_") {
         return (
           <text
-              fg={shade(inkTinted, theme, s * 0.08)}
+            fg={shade(inkTinted, theme, s * 0.08)}
             bg={shade(shadowTinted, theme, ghost(s, 0.24) + ghost(q, 0.06))}
             attributes={attrs}
             selectable={false}
@@ -783,7 +783,7 @@ export function Logo(props: { shape?: LogoShape; ink?: RGBA; idle?: boolean } = 
       if (char === "^") {
         return (
           <text
-              fg={shade(inkTop, theme, n + p + e + b)}
+            fg={shade(inkTop, theme, n + p + e + b)}
             bg={shade(shadowBot, theme, ghost(s, 0.18) + ghost(q, 0.05) + ghost(b, 0.08))}
             attributes={attrs}
             selectable={false}
@@ -795,7 +795,7 @@ export function Logo(props: { shape?: LogoShape; ink?: RGBA; idle?: boolean } = 
 
       if (char === "~") {
         return (
-            <text fg={shade(shadowTop, theme, ghost(s, 0.22) + ghost(q, 0.05))} attributes={attrs} selectable={false}>
+          <text fg={shade(shadowTop, theme, ghost(s, 0.22) + ghost(q, 0.05))} attributes={attrs} selectable={false}>
             ▀
           </text>
         )

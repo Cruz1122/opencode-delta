@@ -78,8 +78,7 @@ const DeltaInstallConfigSubcommand: CommandModule<{}, DeltaInstallConfigArgs> = 
 export const DeltaCommand: CommandModule = {
   command: "delta <action>",
   describe: "OpenCode Delta maintenance commands",
-  builder: (yargs) =>
-    yargs.command(DeltaStatusSubcommand).command(DeltaInstallConfigSubcommand).demandCommand(),
+  builder: (yargs) => yargs.command(DeltaStatusSubcommand).command(DeltaInstallConfigSubcommand).demandCommand(),
   handler: () => {},
 }
 
@@ -114,9 +113,10 @@ async function installConfig(sourcePath: string, targetPath: string, agentsSourc
     const block = `${begin}\n${managed.trimEnd()}\n${end}\n`
     const escapedBegin = escapeRegExp(begin)
     const escapedEnd = escapeRegExp(end)
-    const replaced = current.includes(begin) && current.includes(end)
-      ? current.replace(new RegExp(`${escapedBegin}[\\s\\S]*?${escapedEnd}\\n?`), block)
-      : `${current.trimEnd()}${current.trim() ? "\n\n" : ""}${block}`
+    const replaced =
+      current.includes(begin) && current.includes(end)
+        ? current.replace(new RegExp(`${escapedBegin}[\\s\\S]*?${escapedEnd}\\n?`), block)
+        : `${current.trimEnd()}${current.trim() ? "\n\n" : ""}${block}`
     await fs.mkdir(path.dirname(agentsTarget), { recursive: true })
     await fs.writeFile(agentsTarget, replaced)
   }

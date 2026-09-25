@@ -1492,10 +1492,7 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
     if (!props.message.time.completed) return
     const durationMs = duration()
     if (durationMs <= 0) return
-    return buildTokenStats(
-      aggregateTokens(turnAssistants(messages(), props.message.parentID)),
-      durationMs,
-    )
+    return buildTokenStats(aggregateTokens(turnAssistants(messages(), props.message.parentID)), durationMs)
   })
 
   const agentColor = createMemo(() => local.agent.color(props.message.agent))
@@ -1565,10 +1562,7 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
             <text marginTop={1}>
               <span
                 style={{
-                  fg:
-                    props.message.error?.name === "MessageAbortedError"
-                      ? theme.textMuted
-                      : agentColor(),
+                  fg: props.message.error?.name === "MessageAbortedError" ? theme.textMuted : agentColor(),
                 }}
               >
                 ▣{" "}

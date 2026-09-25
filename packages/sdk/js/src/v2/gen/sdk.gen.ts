@@ -3358,7 +3358,7 @@ export class Provider extends HeyApiClient {
   /**
    * Get provider usage
    *
-   * Retrieve subscription usage limits for a provider when available (e.g. ChatGPT Codex).
+   * Retrieve subscription usage limits for a provider when available (ChatGPT Codex or OpenCode Go).
    */
   public usage<ThrowOnError extends boolean = false>(
     parameters: {

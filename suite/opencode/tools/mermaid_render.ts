@@ -3,7 +3,12 @@ import { promises as fs } from "node:fs"
 import path from "node:path"
 import { exec, within } from "../lib/common"
 
-const slug = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "diagram"
+const slug = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "diagram"
 
 export default tool({
   description: "Render Mermaid source into a local brain/assets/diagrams SVG or PNG without overwriting the source.",
@@ -24,7 +29,10 @@ export default tool({
     let input: string
     let temporary = false
     if (args.sourcePath) {
-      input = within(brain, path.relative("brain", args.sourcePath.startsWith("brain/") ? args.sourcePath : `brain/${args.sourcePath}`))
+      input = within(
+        brain,
+        path.relative("brain", args.sourcePath.startsWith("brain/") ? args.sourcePath : `brain/${args.sourcePath}`),
+      )
       if (!input.endsWith(".mmd") && !input.endsWith(".mermaid")) throw new Error("Source must be .mmd or .mermaid")
     } else {
       input = path.join(brain, "architecture", "diagrams", `.${slug(args.outputName)}-${process.pid}.mmd`)
@@ -38,12 +46,20 @@ export default tool({
       await fs.access(binary)
     } catch {
       if (temporary) await fs.unlink(input).catch(() => {})
-      return JSON.stringify({ status: "dependency-missing", message: "Mermaid CLI is not installed. Run bun install in ~/.config/opencode or restart OpenCode to install package.json dependencies." })
+      return JSON.stringify({
+        status: "dependency-missing",
+        message:
+          "Mermaid CLI is not installed. Run bun install in ~/.config/opencode or restart OpenCode to install package.json dependencies.",
+      })
     }
     const command = `${JSON.stringify(binary)} -i ${JSON.stringify(input)} -o ${JSON.stringify(output)} -t ${args.theme}`
     const result = await exec(command, root, 180_000)
     if (temporary) await fs.unlink(input).catch(() => {})
     if (result.exitCode !== 0) return JSON.stringify({ status: "failed", stderr: result.stderr, stdout: result.stdout })
-    return JSON.stringify({ status: "rendered", output: path.relative(root, output), source: args.sourcePath ?? "inline" })
+    return JSON.stringify({
+      status: "rendered",
+      output: path.relative(root, output),
+      source: args.sourcePath ?? "inline",
+    })
   },
 })

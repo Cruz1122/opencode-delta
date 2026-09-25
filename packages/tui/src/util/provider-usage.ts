@@ -21,7 +21,9 @@ function formatWindow(window: ProviderUsageWindow | undefined) {
 
 export function formatProviderUsage(snapshot: ProviderUsageSnapshot | undefined) {
   if (!snapshot) return undefined
-  return [formatWindow(snapshot.primary), formatWindow(snapshot.secondary), formatWindow(snapshot.tertiary)]
-    .filter(Boolean)
-    .join(" · ") || undefined
+  return (
+    [formatWindow(snapshot.primary), formatWindow(snapshot.secondary), formatWindow(snapshot.tertiary)]
+      .filter(Boolean)
+      .join(" · ") || undefined
+  )
 }

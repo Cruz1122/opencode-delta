@@ -23,11 +23,7 @@ const env = AppNodeBuilder.build(
 )
 const it = testEffect(env)
 
-function sessionInfo(input: {
-  id: string
-  metadata?: Session.Info["metadata"]
-  parentID?: string
-}): Session.Info {
+function sessionInfo(input: { id: string; metadata?: Session.Info["metadata"]; parentID?: string }): Session.Info {
   return {
     id: SessionID.make(input.id),
     slug: input.id,
