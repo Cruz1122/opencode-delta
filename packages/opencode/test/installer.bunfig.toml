@@ -1,0 +1,3 @@
+[test]
+# Native release tests use only Bun's runner and node built-ins, not workspace services.
+preload = []

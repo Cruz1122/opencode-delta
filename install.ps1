@@ -21,7 +21,7 @@ $pathChanged = $false
 $previousUserPath = [Environment]::GetEnvironmentVariable("Path", "User")
 
 function Check-Exit([string]$Message) {
-  if ($LASTEXITCODE -ne 0) { throw $Message }
+  if ($LASTEXITCODE -ne 0) { throw "$Message (exit code: $LASTEXITCODE)" }
 }
 
 function Set-UserPath([bool]$Add) {
@@ -71,8 +71,9 @@ try {
   $expected = ((Get-Content -LiteralPath "$archivePath.sha256" -Raw).Trim() -split "\s+")[0]
   $actual = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash
   if ($expected -notmatch "^[a-fA-F0-9]{64}$" -or $expected -ine $actual) { throw "Checksum mismatch: expected $expected; received $actual" }
-  $types = @(& tar.exe -tvzf $archivePath)
-  Check-Exit "Could not inspect archive types"
+  $tarErrors = Join-Path $tempDir "tar-errors.txt"
+  $types = @(& tar.exe -tvzf $archivePath 2> $tarErrors)
+  Check-Exit "Could not inspect archive types: $(Get-Content -LiteralPath $tarErrors -Raw)"
   foreach ($entry in $types) {
     if (-not $entry -or $entry.Substring(0, 1) -notin @("-", "d")) { throw "Archive contains links or special files" }
   }
