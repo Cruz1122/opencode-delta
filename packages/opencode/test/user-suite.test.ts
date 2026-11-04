@@ -63,10 +63,19 @@ test("read-only Claude roles cannot edit through native file tools", async () =>
 })
 
 function metadata(text: string): Record<string, unknown> {
-  const value: unknown = Bun.YAML.parse(text.split("---\n")[1])
+  const frontmatter = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/)?.[1]
+  if (!frontmatter) throw new Error("Missing frontmatter")
+  const value: unknown = Bun.YAML.parse(frontmatter)
   if (!record(value)) throw new Error("Invalid frontmatter")
   return value
 }
+
+test("agent frontmatter accepts both LF and Windows CRLF checkouts", () => {
+  for (const newline of ["\n", "\r\n"])
+    expect(metadata(["---", "description: portable role", "---", "prompt"].join(newline))).toEqual({
+      description: "portable role",
+    })
+})
 
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)

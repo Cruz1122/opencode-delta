@@ -26,7 +26,15 @@ test.skipIf(!process.env.OPENCODE_DELTA_TEST_RELEASE_DIR)(
       PATH: windows
         ? `${process.env.SystemRoot}\\System32;${process.env.SystemRoot}\\System32\\WindowsPowerShell\\v1.0`
         : "/usr/bin:/bin",
-      ...(windows ? { SystemRoot: process.env.SystemRoot, TEMP: home, TMP: home } : {}),
+      ...(windows
+        ? {
+            SystemRoot: process.env.SystemRoot,
+            PROCESSOR_ARCHITECTURE: process.env.PROCESSOR_ARCHITECTURE,
+            PROCESSOR_ARCHITEW6432: process.env.PROCESSOR_ARCHITEW6432,
+            TEMP: home,
+            TMP: home,
+          }
+        : {}),
     }
     const server = Bun.serve({
       port: 0,
