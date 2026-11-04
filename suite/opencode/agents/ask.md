@@ -7,37 +7,34 @@ permission:
   edit: deny
   bash:
     "*": ask
-    "pwd": allow
-    "pwd *": allow
-    "ls": allow
-    "ls *": allow
-    "find *": allow
-    "fd *": allow
-    "rg *": allow
-    "grep *": allow
-    "sed -n *": allow
-    "head *": allow
-    "tail *": allow
-    "cat *": allow
-    "stat *": allow
-    "file *": allow
-    "git status": allow
-    "git status *": allow
-    "git diff": allow
-    "git diff *": allow
-    "git log *": allow
-    "git show *": allow
-    "git blame *": allow
-    "git branch --show-current": allow
-    "git ls-files *": allow
-  task:
-    "*": deny
-    "cartographer": allow
-    "researcher": allow
-    "archivist": allow
+    pwd: allow
+    pwd *: allow
+    ls: allow
+    ls *: allow
+    find *: allow
+    fd *: allow
+    rg *: allow
+    grep *: allow
+    sed -n *: allow
+    head *: allow
+    tail *: allow
+    cat *: allow
+    stat *: allow
+    file *: allow
+    git status: allow
+    git status *: allow
+    git diff: allow
+    git diff *: allow
+    git log *: allow
+    git show *: allow
+    git blame *: allow
+    git branch --show-current: allow
+    git ls-files *: allow
+  task: allow
   brain_search: allow
   diff_inspect: allow
   project_verify: deny
+  chrome_devtools_*: ask
   brain_write_candidate: deny
   mermaid_render: deny
   external_directory: ask

@@ -7,35 +7,36 @@ permission:
   edit: deny
   bash:
     "*": ask
-    "pwd": allow
-    "pwd *": allow
-    "ls": allow
-    "ls *": allow
-    "find *": allow
-    "fd *": allow
-    "rg *": allow
-    "grep *": allow
-    "sed -n *": allow
-    "head *": allow
-    "tail *": allow
-    "cat *": allow
-    "stat *": allow
-    "file *": allow
-    "git status": allow
-    "git status *": allow
-    "git diff": allow
-    "git diff *": allow
-    "git log *": allow
-    "git show *": allow
-    "git blame *": allow
-    "git branch --show-current": allow
-    "git ls-files *": allow
-  task: deny
+    pwd: allow
+    pwd *: allow
+    ls: allow
+    ls *: allow
+    find *: allow
+    fd *: allow
+    rg *: allow
+    grep *: allow
+    sed -n *: allow
+    head *: allow
+    tail *: allow
+    cat *: allow
+    stat *: allow
+    file *: allow
+    git status: allow
+    git status *: allow
+    git diff: allow
+    git diff *: allow
+    git log *: allow
+    git show *: allow
+    git blame *: allow
+    git branch --show-current: allow
+    git ls-files *: allow
+  task: allow
   brain_search: allow
   diff_inspect: deny
   project_verify: deny
   brain_write_candidate: allow
   mermaid_render: deny
+  external_directory: ask
 ---
 
 Operate on the project brain without turning it into a transcript archive. Retrieve only relevant accepted decisions, verified memory, incidents, constraints, and contradictions. Treat candidates and inferred notes as lower authority.
