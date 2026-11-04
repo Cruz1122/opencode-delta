@@ -1,215 +1,133 @@
+param(
+  [ValidateSet("opencode", "claude", "both")][string]$Only = "both",
+  [switch]$Check,
+  [switch]$Uninstall,
+  [switch]$Undo,
+  [switch]$SkipClaudeInstall,
+  [switch]$UpdateClaude
+)
 $ErrorActionPreference = "Stop"
-
-$repository = if ($env:OPENCODE_DELTA_REPOSITORY) { $env:OPENCODE_DELTA_REPOSITORY } else { "Cruz1122/opencode-delta" }
-$baseUrl = if ($env:OPENCODE_DELTA_RELEASE_BASE_URL) {
-  $env:OPENCODE_DELTA_RELEASE_BASE_URL.TrimEnd("/")
-} else {
-  "https://github.com/$repository/releases/latest/download"
-}
-$version = $env:OPENCODE_DELTA_VERSION
-$installRoot = if ($env:OPENCODE_DELTA_INSTALL_ROOT) { $env:OPENCODE_DELTA_INSTALL_ROOT } else { Join-Path $env:LOCALAPPDATA "OpenCode-Delta" }
-$installDir = Join-Path $installRoot "bin"
-$configDir = if ($env:OPENCODE_CONFIG_DIR) { $env:OPENCODE_CONFIG_DIR } else { Join-Path $env:APPDATA "opencode" }
+$userHome = if ($env:OPENCODE_TEST_HOME) { $env:OPENCODE_TEST_HOME } else { $HOME }
+$repository = if ($env:OPENCODE_DELTA_REPOSITORY) { $env:OPENCODE_DELTA_REPOSITORY } else { "Cruz1122/opencode" }
+$installDir = if ($env:OPENCODE_DELTA_INSTALL_ROOT) { Join-Path $env:OPENCODE_DELTA_INSTALL_ROOT "bin" } else { Join-Path $userHome ".local\bin" }
+$configHome = if ($env:XDG_CONFIG_HOME) { $env:XDG_CONFIG_HOME } else { Join-Path $userHome ".config" }
+$configDir = if ($env:OPENCODE_CONFIG_DIR) { $env:OPENCODE_CONFIG_DIR } else { Join-Path $configHome "opencode" }
+$claudeDir = if ($env:CLAUDE_CONFIG_DIR) { $env:CLAUDE_CONFIG_DIR } else { Join-Path $userHome ".claude" }
 $stateDir = Join-Path $env:LOCALAPPDATA "OpenCode-Delta\state"
-$backupDir = Join-Path $stateDir ("backups\{0}-{1}" -f (Get-Date -Format "yyyyMMdd-HHmmss"), $PID)
-$tempDir = Join-Path ([IO.Path]::GetTempPath()) ("opencode-delta-install-{0}" -f $PID)
-$targetBinary = Join-Path $installDir "opencode.exe"
-$upstreamBinary = Join-Path $HOME ".opencode\bin\opencode.exe"
-$committed = $false
-$configExisted = Test-Path $configDir
-$targetBinaryExisted = Test-Path $targetBinary
-$upstreamBinaryExisted = Test-Path $upstreamBinary
-$configBackedUp = $false
-$targetBinaryBackedUp = $false
-$upstreamBinaryBackedUp = $false
+$tempDir = $null
+$profileInstalled = $false
 $pathChanged = $false
-$previousUserPath = $null
-$mutating = $false
+$previousUserPath = [Environment]::GetEnvironmentVariable("Path", "User")
 
-function Fail([string]$Message) {
-  throw $Message
+function Check-Exit([string]$Message) {
+  if ($LASTEXITCODE -ne 0) { throw $Message }
 }
 
-function Restore-State {
-  if ($committed) { return }
-  if (-not $mutating) { return }
-  Write-Error "Installation failed; restoring previous state"
-  if (Test-Path $configDir) { Remove-Item -LiteralPath $configDir -Recurse -Force }
-  if ($configBackedUp) {
-    New-Item -ItemType Directory -Path (Split-Path $configDir) -Force | Out-Null
-    Copy-Item -LiteralPath (Join-Path $backupDir "config") -Destination $configDir -Recurse -Force
-  }
-  if (Test-Path $targetBinary) { Remove-Item -LiteralPath $targetBinary -Force }
-  if ($targetBinaryBackedUp) {
-    New-Item -ItemType Directory -Path $installDir -Force | Out-Null
-    Copy-Item -LiteralPath (Join-Path $backupDir "target-opencode.exe") -Destination $targetBinary -Force
-  }
-  if ($upstreamBinaryBackedUp -and -not (Test-Path $upstreamBinary)) {
-    New-Item -ItemType Directory -Path (Split-Path $upstreamBinary) -Force | Out-Null
-    Copy-Item -LiteralPath (Join-Path $backupDir "upstream-opencode.exe") -Destination $upstreamBinary -Force
-  }
-  if ($pathChanged) {
-    [Environment]::SetEnvironmentVariable("Path", $previousUserPath, "User")
-  }
+function Set-UserPath([bool]$Add) {
+  $current = [Environment]::GetEnvironmentVariable("Path", "User")
+  $parts = @($current -split ";" | Where-Object { $_ -and $_.TrimEnd("\") -ine $installDir.TrimEnd("\") })
+  $value = if ($Add) { (@($installDir) + $parts) -join ";" } else { $parts -join ";" }
+  [Environment]::SetEnvironmentVariable("Path", $value, "User")
 }
 
 try {
-  New-Item -ItemType Directory -Path $tempDir, $backupDir -Force | Out-Null
-  $osArch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
-  if ($osArch -eq "Arm64") {
-    $arch = "arm64"
-  } elseif ($osArch -eq "X64") {
-    $arch = "x64"
-  } else {
-    Fail "Unsupported Windows architecture: $osArch"
+  if (-not (Get-Command tar.exe -ErrorAction SilentlyContinue)) { throw "Windows tar.exe is required. No system packages will be installed." }
+  $architecture = if ($env:PROCESSOR_ARCHITEW6432) { $env:PROCESSOR_ARCHITEW6432 } else { $env:PROCESSOR_ARCHITECTURE }
+  $target = switch ($architecture) {
+    "ARM64" { "windows-arm64" }
+    "AMD64" { "windows-x64-baseline" }
+    default { throw "Unsupported Windows architecture: $architecture" }
   }
-
-  $baseline = $false
-  if ($arch -eq "x64") {
-    $baseline = -not [System.Runtime.Intrinsics.X86.Avx2]::IsSupported
+  if ($Check) {
+    Write-Host "Preflight OK (offline): $target; selection=$Only"
+    Write-Host "User bin: $installDir; OpenCode: $configDir; Claude: $claudeDir"
+    Write-Host "No elevation or development toolchain required. Network and executable policy are checked during installation."
+    return
   }
-  $target = "windows-$arch"
-  if ($baseline) { $target += "-baseline" }
+  $tempDir = Join-Path ([IO.Path]::GetTempPath()) ("opencode-delta-" + [guid]::NewGuid().ToString())
+  New-Item -ItemType Directory -Path $tempDir | Out-Null
+  $helper = Join-Path $stateDir "maintenance\opencode.exe"
+  if ($Uninstall -or $Undo) {
+    if (-not (Test-Path -LiteralPath $helper)) { throw "No managed installation helper found" }
+    $binary = Join-Path $tempDir "opencode.exe"
+    Copy-Item -LiteralPath $helper -Destination $binary
+    $action = if ($Undo) { "undo" } else { "uninstall" }
+    & $binary delta profile $action --state $stateDir
+    Check-Exit "Profile removal refused or failed; inspect the reported managed file"
+    if (-not (Test-Path (Join-Path $installDir "opencode.exe")) -and -not (Test-Path (Join-Path $installDir "claude.exe"))) { Set-UserPath $false }
+    Write-Host "Managed profile $action complete. Claude executable, authentication, history and backups are preserved."
+    return
+  }
+  $base = if ($env:OPENCODE_DELTA_RELEASE_BASE_URL) { $env:OPENCODE_DELTA_RELEASE_BASE_URL.TrimEnd("/") } else { "https://github.com/$repository/releases/latest/download" }
+  if ($env:OPENCODE_DELTA_VERSION) {
+    $root = if ($env:OPENCODE_DELTA_RELEASE_ROOT_URL) { $env:OPENCODE_DELTA_RELEASE_ROOT_URL.TrimEnd("/") } else { "https://github.com/$repository/releases/download" }
+    $base = "$root/delta-v$env:OPENCODE_DELTA_VERSION"
+  }
   $archive = "opencode-delta-$target.tar.gz"
-  $releaseBase = $baseUrl
-  if ($version) {
-    $releaseRoot = if ($env:OPENCODE_DELTA_RELEASE_ROOT_URL) { $env:OPENCODE_DELTA_RELEASE_ROOT_URL.TrimEnd("/") } else { "https://github.com/$repository/releases/download" }
-    $releaseBase = "$releaseRoot/delta-v$version"
-  }
   $archivePath = Join-Path $tempDir $archive
-  $checksumPath = "$archivePath.sha256"
-
-  Write-Host "==> Installing OpenCode Delta ($target)"
-  Invoke-WebRequest -Uri "$releaseBase/$archive" -OutFile $archivePath
-  Invoke-WebRequest -Uri "$releaseBase/$archive.sha256" -OutFile $checksumPath
-  $expected = ((Get-Content -LiteralPath $checksumPath -Raw) -split "\s+")[0].ToLowerInvariant()
-  $actual = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
-  if ($expected.Length -ne 64 -or $expected -ne $actual) { Fail "Checksum mismatch for $archive" }
-
-  $packageDir = Join-Path $tempDir "package"
-  New-Item -ItemType Directory -Path $packageDir -Force | Out-Null
-  $archiveTypes = Join-Path $tempDir "archive.types"
-  $archiveListing = & tar.exe -tvzf $archivePath
-  if ($LASTEXITCODE -ne 0) { Fail "Could not inspect release entry types" }
-  $archiveListing | Set-Content -LiteralPath $archiveTypes
-  foreach ($entry in (Get-Content -LiteralPath $archiveTypes)) {
-    $entryType = $entry.Substring(0, 1)
-    if ($entryType -ne "-" -and $entryType -ne "d") {
-      Fail "Release contains a symlink, hardlink, or special file"
-    }
+  Invoke-WebRequest -UseBasicParsing -Uri "$base/$archive" -OutFile $archivePath
+  Invoke-WebRequest -UseBasicParsing -Uri "$base/$archive.sha256" -OutFile "$archivePath.sha256"
+  $expected = ((Get-Content -LiteralPath "$archivePath.sha256" -Raw).Trim() -split "\s+")[0]
+  $actual = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash
+  if ($expected -notmatch "^[a-fA-F0-9]{64}$" -or $expected -ine $actual) { throw "Checksum mismatch" }
+  $types = @(& tar.exe -tvzf $archivePath)
+  Check-Exit "Could not inspect archive types"
+  foreach ($entry in $types) {
+    if (-not $entry -or $entry.Substring(0, 1) -notin @("-", "d")) { throw "Archive contains links or special files" }
   }
-  foreach ($entry in (& tar.exe -tzf $archivePath)) {
-    if ([IO.Path]::IsPathRooted($entry) -or $entry -match "(^|[\\/])\.\.([\\/]|$)") {
-      Fail "Release contains an unsafe archive path: $entry"
-    }
+  $paths = @(& tar.exe -tzf $archivePath)
+  Check-Exit "Could not inspect archive paths"
+  foreach ($entry in $paths) {
+    if ([IO.Path]::IsPathRooted($entry) -or $entry -match "(^|[\\/])\.\.([\\/]|$)|:") { throw "Unsafe archive path: $entry" }
   }
-  & tar.exe -xzf $archivePath -C $packageDir
-  if ($LASTEXITCODE -ne 0) { Fail "Could not extract $archive" }
-  $bundle = $packageDir
+  $bundle = Join-Path $tempDir "package"
+  New-Item -ItemType Directory -Path $bundle | Out-Null
+  & tar.exe -xzf $archivePath -C $bundle
+  Check-Exit "Could not extract archive"
   $binary = Join-Path $bundle "bin\opencode.exe"
-  if (-not (Test-Path $binary)) {
-    $binary = Join-Path $bundle "bin\opencode"
-  }
-  if (-not (Test-Path $binary)) { Fail "Release does not contain an OpenCode executable" }
-  if (-not (Test-Path (Join-Path $bundle "delta-bundle.json"))) { Fail "Release metadata is missing" }
-  if (-not (Test-Path (Join-Path $bundle "suite\opencode\opencode.json"))) { Fail "OpenCode suite is missing" }
-  if (-not (Test-Path (Join-Path $bundle "suite\opencode\skills"))) { Fail "OpenCode skills are missing" }
-
-  if ($configExisted) {
-    Copy-Item -LiteralPath $configDir -Destination (Join-Path $backupDir "config") -Recurse -Force
-    $configBackedUp = $true
-  }
-  if ($targetBinaryExisted) {
-    Copy-Item -LiteralPath $targetBinary -Destination (Join-Path $backupDir "target-opencode.exe") -Force
-    $targetBinaryBackedUp = $true
-  }
-  if ($upstreamBinaryExisted) {
-    Copy-Item -LiteralPath $upstreamBinary -Destination (Join-Path $backupDir "upstream-opencode.exe") -Force
-    $upstreamBinaryBackedUp = $true
-  }
-
-  $mutating = $true
-  New-Item -ItemType Directory -Path $configDir, $installDir -Force | Out-Null
-  foreach ($directory in @("agents", "instructions", "plugins", "tools", "lib", "brain-templates", "cursor", "bin", "skills")) {
-    $source = Join-Path $bundle "suite\opencode\$directory"
-    if (Test-Path $source) {
-      $destination = Join-Path $configDir $directory
-      New-Item -ItemType Directory -Path $destination -Force | Out-Null
-      Copy-Item -Path (Join-Path $source "*") -Destination $destination -Recurse -Force
+  if (-not (Test-Path -LiteralPath $binary)) { throw "Release executable is missing" }
+  & $binary --version
+  Check-Exit "Release executable failed to start; executable policy may block it"
+  if ($Only -ne "opencode" -and -not $SkipClaudeInstall) {
+    $claudeVersion = if ($env:CLAUDE_CODE_VERSION) { $env:CLAUDE_CODE_VERSION } else { "stable" }
+    $claude = Get-Command claude -ErrorAction SilentlyContinue
+    $nativeClaude = Join-Path $userHome ".local\bin\claude.exe"
+    if ($claude) {
+      if ($UpdateClaude) { & $claude.Source install $claudeVersion; Check-Exit "Explicit Claude update failed" }
+      & $claude.Source --version
+      Check-Exit "Existing Claude executable failed to start"
+    } elseif (Test-Path -LiteralPath $nativeClaude) {
+      if ($UpdateClaude) { & $nativeClaude install $claudeVersion; Check-Exit "Explicit Claude update failed" }
+      & $nativeClaude --version
+      Check-Exit "Existing native Claude executable failed to start"
+    } else {
+      Write-Host "Installing Claude from Anthropic (separate installer; may leave its own files on failure)."
+      $claudeInstaller = Join-Path $tempDir "claude-install.ps1"
+      Invoke-WebRequest -UseBasicParsing -Uri "https://claude.ai/install.ps1" -OutFile $claudeInstaller
+      & powershell.exe -NoProfile -NonInteractive -File $claudeInstaller $claudeVersion
+      Check-Exit "Anthropic installer failed; managed profile has not been changed"
+      & $nativeClaude --version
+      Check-Exit "Native Claude executable failed to start"
     }
   }
-  $nodeModules = Join-Path $bundle "suite\opencode\node_modules"
-  if (Test-Path $nodeModules) {
-    $destination = Join-Path $configDir "node_modules"
-    New-Item -ItemType Directory -Path $destination -Force | Out-Null
-    Copy-Item -Path (Join-Path $nodeModules "*") -Destination $destination -Recurse -Force
-  }
-  Copy-Item -LiteralPath (Join-Path $bundle "suite\opencode\package.json") -Destination (Join-Path $configDir "package.json") -Force
-
-  & $binary delta install-config `
-    --source (Join-Path $bundle "suite\opencode\opencode.json") `
-    --target (Join-Path $configDir "opencode.json") `
-    --agents-source (Join-Path $bundle "suite\opencode\AGENTS.md") `
-    --agents-target (Join-Path $configDir "AGENTS.md")
-  if ($LASTEXITCODE -ne 0) { Fail "Delta configuration merge failed" }
-
-  $newBinary = Join-Path $installDir (".opencode-delta-{0}.exe" -f $PID)
-  Copy-Item -LiteralPath $binary -Destination $newBinary -Force
-  Move-Item -LiteralPath $newBinary -Destination $targetBinary -Force
-
-  $metadata = Get-Content -LiteralPath (Join-Path $bundle "delta-bundle.json") -Raw | ConvertFrom-Json
-  $marker = [ordered]@{
-    product = "opencode-delta"
-    version = [string]$metadata.version
-    installedAt = (Get-Date).ToUniversalTime().ToString("o")
-    mascot = $true
-    autopilot = $true
-    target = $target
-    installDir = $installDir
-    backupDir = $backupDir
-  }
-  $marker | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $configDir "delta.json") -Encoding UTF8
-
-  if (Test-Path $upstreamBinary) {
-    Move-Item -LiteralPath $upstreamBinary -Destination (Join-Path $backupDir "upstream-opencode.exe") -Force
-  }
-  & $targetBinary delta status --json | Out-Null
-  if ($LASTEXITCODE -ne 0) { Fail "Installed Delta binary failed its status check" }
-
-  $installState = [ordered]@{
-    product = "opencode-delta"
-    version = [string]$metadata.version
-    target = $target
-    installDir = $installDir
-    configDir = $configDir
-    backupDir = $backupDir
-    dataPreserved = $true
-  }
-  New-Item -ItemType Directory -Path $stateDir -Force | Out-Null
-  $installState | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $stateDir "install.json") -Encoding UTF8
-  try {
-    $previousUserPath = [Environment]::GetEnvironmentVariable("Path", "User")
-    $userPath = $previousUserPath
-    $parts = @($userPath -split ";" | Where-Object { $_ -and $_.TrimEnd("\") -ne $installDir.TrimEnd("\") })
-    [Environment]::SetEnvironmentVariable("Path", (($installDir) + $parts -join ";"), "User")
-    $pathChanged = $true
-    $env:Path = "$installDir;$env:Path"
-  } catch {
-    if ($pathChanged) {
-      [Environment]::SetEnvironmentVariable("Path", $previousUserPath, "User")
-      $pathChanged = $false
-    }
-    Fail "Could not update the user PATH: $_"
-  }
-  $committed = $true
-  Write-Host ""
-  Write-Host "OpenCode Delta installation complete."
-  Write-Host "Open a new terminal, then run: opencode delta status --json"
-  Write-Host "Backup: $backupDir"
+  New-Item -ItemType Directory -Path (Split-Path $helper) -Force | Out-Null
+  Copy-Item -LiteralPath $binary -Destination $helper -Force
+  & $binary delta profile install --bundle $bundle --home $userHome --config $configDir --claude $claudeDir --bin $installDir --state $stateDir --only $Only
+  Check-Exit "Managed profile installation failed"
+  $profileInstalled = $true
+  Set-UserPath $true
+  $pathChanged = $true
+  $env:Path = "$installDir;$env:Path"
+  Write-Host "Installation complete. Open a new terminal, authenticate separately, and use claude --agent ask (or plan, agent, debug, quality)."
+  Write-Host "Rerun to update. Use -Undo to restore the previous generation or -Uninstall to remove managed generations."
 } catch {
-  Restore-State
+  if ($profileInstalled) {
+    & $binary delta profile undo --state $stateDir
+    if ($LASTEXITCODE -ne 0) { Write-Warning "Rollback failed. Backups remain in $stateDir" }
+  }
+  if ($pathChanged) { [Environment]::SetEnvironmentVariable("Path", $previousUserPath, "User") }
   Write-Error $_
   exit 1
 } finally {
-  if (Test-Path $tempDir) { Remove-Item -LiteralPath $tempDir -Recurse -Force -ErrorAction SilentlyContinue }
+  if ($tempDir -and (Test-Path -LiteralPath $tempDir)) { Remove-Item -LiteralPath $tempDir -Recurse -Force }
 }

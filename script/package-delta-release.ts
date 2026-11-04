@@ -12,14 +12,28 @@ const output = path.resolve(process.env.OPENCODE_DELTA_RELEASE_DIR ?? path.join(
 const stageRoot = path.join(output, ".stage")
 const version = process.env.OPENCODE_DELTA_VERSION ?? opencodePackage.version
 
-await fs.rm(output, { recursive: true, force: true })
+// Never recursively delete a caller-selected directory, even after a typo in an env var.
+if (output === root || root.startsWith(output + path.sep) || output === path.parse(output).root)
+  throw new Error("Release output must be a dedicated directory, not the repository or an ancestor")
+if (output.startsWith(root + path.sep) && output !== path.join(root, "release"))
+  throw new Error("Inside the repository, release output must be the dedicated release directory")
+if (
+  (
+    await fs.readdir(output).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === "ENOENT") return []
+      throw error
+    })
+  ).length
+)
+  throw new Error(`Release output must be empty; refusing to overwrite ${output}`)
 await fs.mkdir(output, { recursive: true })
 
 const suiteStage = path.join(stageRoot, "suite", "opencode")
 await fs.mkdir(path.dirname(suiteStage), { recursive: true })
 await fs.cp(path.join(root, "suite/opencode"), suiteStage, { recursive: true })
+await fs.cp(path.join(root, "suite/claude"), path.join(stageRoot, "suite/claude"), { recursive: true })
 await fs.cp(path.join(root, "assets"), path.join(stageRoot, "assets"), { recursive: true })
-await $`bun install --cwd ${suiteStage} --production`
+await $`bun install --cwd ${suiteStage} --production --ignore-scripts`
 
 const targets = [
   "linux-x64",
@@ -46,9 +60,10 @@ for (const target of targets) {
   if (!binary) continue
 
   const stage = path.join(stageRoot, target)
+  const binaryName = target.startsWith("windows-") ? "opencode.exe" : "opencode"
   await fs.rm(stage, { recursive: true, force: true })
   await fs.mkdir(path.join(stage, "bin"), { recursive: true })
-  await fs.copyFile(binary, path.join(stage, "bin", path.basename(binary)))
+  await fs.copyFile(binary, path.join(stage, "bin", binaryName))
   await fs.cp(path.join(stageRoot, "suite"), path.join(stage, "suite"), { recursive: true })
   await fs.cp(path.join(stageRoot, "assets"), path.join(stage, "assets"), { recursive: true })
   await fs.writeFile(
@@ -58,7 +73,7 @@ for (const target of targets) {
         product: "opencode-delta",
         version,
         target,
-        binary: path.posix.join("bin", path.basename(binary)),
+        binary: path.posix.join("bin", binaryName),
         suite: "suite/opencode",
         mascot: true,
         autopilot: true,
@@ -98,6 +113,11 @@ await fs.writeFile(
   ) + "\n",
 )
 await fs.rm(stageRoot, { recursive: true, force: true })
+for (const installer of ["install.sh", "install.ps1"]) {
+  const destination = path.join(output, installer)
+  await fs.copyFile(path.join(root, installer), destination)
+  await fs.writeFile(`${destination}.sha256`, `${await hashFile(destination)}  ${installer}\n`)
+}
 console.log(`Packaged ${Object.keys(artifacts).length} OpenCode Delta artifacts in ${output}`)
 
 async function fileExists(filePath: string) {

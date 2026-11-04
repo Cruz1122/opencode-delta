@@ -4,6 +4,7 @@ import { parse as parseJsonc, type ParseError } from "jsonc-parser"
 import type { CommandModule } from "yargs"
 import { Global } from "@opencode-ai/core/global"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
+import os from "node:os"
 
 type DeltaStatusArgs = {
   json?: boolean
@@ -75,24 +76,79 @@ const DeltaInstallConfigSubcommand: CommandModule<{}, DeltaInstallConfigArgs> = 
   },
 }
 
+const DeltaProfileSubcommand = {
+  command: "profile <operation>",
+  describe: "install, undo, or uninstall the portable user profile",
+  builder: (yargs) =>
+    yargs
+      .positional("operation", { choices: ["install", "undo", "uninstall"], type: "string", demandOption: true })
+      .option("bundle", { type: "string" })
+      .option("home", { type: "string", default: os.homedir() })
+      .option("config", { type: "string", default: process.env.OPENCODE_CONFIG_DIR ?? Global.Path.config })
+      .option("claude", {
+        type: "string",
+        default: process.env.CLAUDE_CONFIG_DIR ?? path.join(os.homedir(), ".claude"),
+      })
+      .option("bin", { type: "string", default: path.join(os.homedir(), ".local/bin") })
+      .option("state", { type: "string", demandOption: true })
+      .option("only", { choices: ["opencode", "claude", "both"] as const, default: "both" as const }),
+  handler: async (args) => {
+    const { installProfile, removeProfile } = await import("../profile")
+    if (args.operation !== "install") {
+      await removeProfile(args.state, args.operation === "undo")
+      return
+    }
+    if (!args.bundle) throw new Error("--bundle is required for profile install")
+    const backup = await installProfile({
+      bundle: args.bundle,
+      home: args.home,
+      config: args.config,
+      claude: args.claude,
+      bin: args.bin,
+      state: args.state,
+      only: args.only,
+      windows: process.platform === "win32",
+    })
+    await writeOutput(`Profile installed. Backup: ${backup}\n`)
+  },
+} satisfies CommandModule<
+  {},
+  {
+    operation: string
+    bundle?: string
+    home: string
+    config: string
+    claude: string
+    bin: string
+    state: string
+    only: "opencode" | "claude" | "both"
+  }
+>
+
 export const DeltaCommand: CommandModule = {
   command: "delta <action>",
   describe: "OpenCode Delta maintenance commands",
-  builder: (yargs) => yargs.command(DeltaStatusSubcommand).command(DeltaInstallConfigSubcommand).demandCommand(),
+  builder: (yargs) =>
+    yargs
+      .command(DeltaStatusSubcommand)
+      .command(DeltaInstallConfigSubcommand)
+      .command(DeltaProfileSubcommand)
+      .demandCommand(),
   handler: () => {},
 }
 
 async function readStatus(): Promise<DeltaStatus> {
-  const markerPath = path.join(Global.Path.config, "delta.json")
+  const configDir = process.env.OPENCODE_CONFIG_DIR ?? Global.Path.config
+  const markerPath = path.join(configDir, "delta.json")
   const marker = await readJson(markerPath)
-  const agents = await countEntries(path.join(Global.Path.config, "agents"))
-  const skills = await countSkillFiles(path.join(Global.Path.config, "skills"))
+  const agents = await countEntries(path.join(configDir, "agents"))
+  const skills = await countSkillFiles(path.join(configDir, "skills"))
   return {
     product: "opencode-delta",
     version: typeof marker?.version === "string" ? marker.version : InstallationVersion,
     mascot: marker?.mascot === true,
     autopilot: marker?.autopilot === true,
-    configDir: Global.Path.config,
+    configDir,
     agents,
     skills,
     installedAt: typeof marker?.installedAt === "string" ? marker.installedAt : undefined,

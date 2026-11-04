@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   build:
-    if: github.repository == 'Cruz1122/opencode-delta'
+    if: github.repository == 'Cruz1122/opencode'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -28,30 +28,67 @@ jobs:
       - name: Resolve release version
         id: meta
         shell: bash
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
         run: |
-          version='${{ inputs.version }}'
+          version="$REQUESTED_VERSION"
           if [ -z "$version" ]; then
             version="${GITHUB_REF_NAME#delta-v}"
             if [ "$version" = "$GITHUB_REF_NAME" ]; then
               version=$(node -e 'process.stdout.write(require("./packages/opencode/package.json").version)')
             fi
           fi
+          version="${version#delta-v}"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]] || { echo 'Invalid release version' >&2; exit 1; }
           echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: Build all release targets
         run: bun run packages/opencode/script/build.ts
+        env:
+          OPENCODE_VERSION: ${{ steps.meta.outputs.version }}
+          OPENCODE_CHANNEL: delta
       - name: Package Delta artifacts
         run: bun run script/package-delta-release.ts
         env:
           OPENCODE_DELTA_VERSION: ${{ steps.meta.outputs.version }}
+      - name: Verify Linux installer and native bundle
+        working-directory: packages/opencode
+        run: bun test test/installer.test.ts test/user-suite.test.ts test/user-suite-export.test.ts test/release-output.test.ts test/installer-release.test.ts
+        env:
+          OPENCODE_DELTA_TEST_RELEASE_DIR: ${{ github.workspace }}/release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: opencode-delta-windows-test
+          path: |
+            release/opencode-delta-windows-x64-baseline.tar.gz
+            release/opencode-delta-windows-x64-baseline.tar.gz.sha256
       - uses: actions/upload-artifact@v4
         with:
           name: opencode-delta-release
           path: release/*
 
-  publish:
+  windows-smoke:
     needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: opencode-delta-windows-test
+          path: release
+      - name: Verify native installer using Windows PowerShell
+        working-directory: packages/opencode
+        run: bun test test/installer-release.test.ts test/user-suite.test.ts
+        env:
+          OPENCODE_DELTA_TEST_RELEASE_DIR: ${{ github.workspace }}/release
+
+  publish:
+    needs: [build, windows-smoke]
     runs-on: ubuntu-24.04
-    if: github.repository == 'Cruz1122/opencode-delta'
+    if: github.repository == 'Cruz1122/opencode'
     steps:
       - uses: actions/download-artifact@v4
         with:
