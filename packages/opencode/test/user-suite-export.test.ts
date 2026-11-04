@@ -45,7 +45,7 @@ test("explicit export adapts roles and omits excluded skills, providers and secr
     await exportUserSuite(source, output)
     expect(await fs.readFile(path.join(source, "opencode.json"), "utf8")).toBe(original)
     expect(await fs.readdir(path.join(output, "opencode/agents"))).toEqual(["ask.md"])
-    expect(await fs.readdir(path.join(output, "claude/skills/example"))).toEqual(["SKILL.md", "reference.md"])
+    expect((await fs.readdir(path.join(output, "claude/skills/example"))).sort()).toEqual(["SKILL.md", "reference.md"])
     expect(await fs.readdir(path.join(output, "claude/skills"))).toEqual(["example"])
     const config = await Bun.file(path.join(output, "opencode/opencode.json")).json()
     expect(config).not.toHaveProperty("subagent_model")
