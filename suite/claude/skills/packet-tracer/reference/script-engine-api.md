@@ -8,15 +8,17 @@ These are the **real** signatures (verified against the MCP's runtime patches an
 If a method is not here, do **not** assume it exists.
 
 **Globals**
+
 - `getDevices(filter)` → **Array of NAME STRINGS**, not device objects (filter `""` = all,
   `"router"` = routers). Calling `.getName()` / `.getPorts()` on an element throws
-  `TypeError: Property 'getName' of object R1 is not a function` — the element *is* `"R1"`.
+  `TypeError: Property 'getName' of object R1 is not a function` — the element _is_ `"R1"`.
   To get the object, feed each name to `ipc.network().getDevice(name)`.
 - `allModuleTypes[name]` → module-type handle (passed to `addModule`)
 - `reportResult(data)` → exists **only when `wait_result=True`**; POSTs the result back
 - ❌ there is **no global `getDevice(...)`**; ❌ no `XMLHttpRequest` in the Script Engine
 
-**Network / device** — `var d = ipc.network().getDevice("R1");`  // ← correct singular lookup, may be null
+**Network / device** — `var d = ipc.network().getDevice("R1");` // ← correct singular lookup, may be null
+
 - `ipc.appWindow().getActiveWorkspace().getLogicalWorkspace()` → `lw`
   - `lw.addDevice(type, model, x, y)` → autoName · `lw.createLink(d1,p1,d2,p2,cableEnumInt)`
 - `d.getPorts()` → **Array of port-name strings** — use `.length`, `[i]`, `.join(",")`.
@@ -24,7 +26,7 @@ If a method is not here, do **not** assume it exists.
 - `d.getPort(name)` → Port | null · `d.getPower()/setPower(bool)/skipBoot()/setName(name)`
 - `d.moveToLocation(x, y)` → repositions on the logical canvas. It is what `pt_move_device` uses;
   in a single `pt_send_raw` you can rearrange dozens of devices without one call per device.
-- `d.addModule(slot, allModuleTypes[model], modelName)` → bool  (**slot is a STRING**)
+- `d.addModule(slot, allModuleTypes[model], modelName)` → bool (**slot is a STRING**)
 - `d.getProcess("AclProcess")` → AclProcess | null (routers) · `d.enterCommand(cmd, mode)`
 - `d.getCommandLine()` → console handle with `getOutput()`, `enterCommand(cmd)`, `getPrompt()`.
   Use **this** for console work: `getCommandPrompt()` exists ONLY on hosts and throws
@@ -36,14 +38,17 @@ If a method is not here, do **not** assume it exists.
 - `d.setDhcpFlag(bool)`, `d.setDefaultGateway(ip)`
 
 **Port** — `var p = d.getPort("GigabitEthernet0/0");`
+
 - `p.getLink()` → link | null (null = free) · `p.setIpSubnetMask(ip, mask)` · `p.setDefaultGateway(ip)`
 - `p.setDnsServerIp(ip)` · `p.setAclInID(id)`/`p.setAclOutID(id)` (pass `""` to clear)
 
 **AclProcess** — `var ap = d.getProcess("AclProcess");`
+
 - `ap.addAcl(name)` · `ap.getAcl(name)` → acl|null · `ap.removeAcl(name)`
 - `acl.addStatement(str)` → bool · `acl.getCommandCount()` → int
 
 **DHCP server (Server-PT only)** — verified PT 9.0 + IpcAPI reference (`class_dhcp_server_process`)
+
 - `var s = d.getProcess("DhcpServerMain").getDhcpServerProcessByPortName("FastEthernet0");`
   `getProcess("DhcpServerMain")` is **null** on routers, switches and PCs; a wrong port name → null.
   ⚠️ `DhcpServerMain` itself has **no** pool methods (`getPoolCount` etc. are undefined there) —
@@ -55,7 +60,7 @@ If a method is not here, do **not** assume it exists.
   `Invalid arguments for IPC call` · `setDefaultRouter(ip)` · `setDnsServerIp(ip)` · `setStartIp(ip)` ·
   `setMaxUsers(n)` (recomputes the end from the start, so set start first) · `setEndIp(ip)`.
   Getters: `getDhcpPoolName/getNetworkAddress/getSubnetMask/getDefaultRouter/getDnsServerIp/
-  getStartIp/getEndIp/getMaxUsers`. There is **no** setter for TFTP, WLC or domain name.
+getStartIp/getEndIp/getMaxUsers`. There is **no** setter for TFTP, WLC or domain name.
 - Behaviour measured live: PT never leases the server's own IP, but **does** lease the gateway's
   if the range covers it. The factory `serverPool` re-fits itself to the server's subnet with
   start = network address and no gateway, so next to a named pool it hands out `.1`.
@@ -66,10 +71,16 @@ phone 8104 · cable 8105 · serial 8106 · auto 8107 · console 8108 · wireless
 octal 8111 · cellular 8112 · usb 8113 · custom_io 8114.
 
 ### 🔒 ALWAYS wrap raw JS in try/catch
+
 ```js
-try { var d = ipc.network().getDevice("R1"); reportResult("ports="+d.getPorts().join(",")); }
-catch (e) { reportResult("ERR: " + e); }
+try {
+  var d = ipc.network().getDevice("R1")
+  reportResult("ports=" + d.getPorts().join(","))
+} catch (e) {
+  reportResult("ERR: " + e)
+}
 ```
+
 An **uncaught** error pops a modal `QMessageBox` in PT ("An error occurred… ReferenceError…") that is
 **modal** and freezes the webview polling loop — the bridge goes "NOT connected" until a human clicks
 **OK**. A **caught** error never does. (The server also guards commands now, but wrap anyway — it's
@@ -83,17 +94,17 @@ incompatible module up front** when the module declares `compatible_with` (HWIC/
 `pt_query_topology` after install. `pt_add_module` reports `installed`/`failed` directly (it used to
 always time out because its JS never called `reportResult`; fixed and verified live 2026-10-07).
 
-| Router family | Module type | Slot (string) | Ports added | Status |
-|---|---|---|---|---|
-| ISR G2 — 2911/2901 | HWIC (`HWIC-2T`, `HWIC-1GE-SFP`) | `"0/0".."0/3"` | `Serial0/x/0`,`Serial0/x/1` | ✅ verified 2911 |
-| ISR G2 — **1941** | HWIC | **only `"0/0"`, `"0/1"`** — it has 2 slots, not 4 | `Serial0/x/0`,`Serial0/x/1` | ✅ verified 1941 (PT 9.0.1) |
-| ISR 4000 — ISR4321/4331 | NIM (`NIM-2T`, `NIM-ES2-4`) | **`"0/1"`, `"0/2"`** | `Serial0/1/0`,`Serial0/1/1` | ✅ verified ISR4321 & ISR4331 |
-| 2811 / 2620XM / 2621XM | NM (`NM-4A/S`, `NM-2FE2W`,…) | **`"1"`** | `Serial1/0..1/3` | ✅ verified 2811 |
-| Router-PT (generic) | NM (`NM-*`, `PT-ROUTER-NM-*`) | `"1"` | ⚠️ non-standard ids (e.g. `Serial2/0`) | installs, odd port names |
+| Router family           | Module type                      | Slot (string)                                     | Ports added                            | Status                        |
+| ----------------------- | -------------------------------- | ------------------------------------------------- | -------------------------------------- | ----------------------------- |
+| ISR G2 — 2911/2901      | HWIC (`HWIC-2T`, `HWIC-1GE-SFP`) | `"0/0".."0/3"`                                    | `Serial0/x/0`,`Serial0/x/1`            | ✅ verified 2911              |
+| ISR G2 — **1941**       | HWIC                             | **only `"0/0"`, `"0/1"`** — it has 2 slots, not 4 | `Serial0/x/0`,`Serial0/x/1`            | ✅ verified 1941 (PT 9.0.1)   |
+| ISR 4000 — ISR4321/4331 | NIM (`NIM-2T`, `NIM-ES2-4`)      | **`"0/1"`, `"0/2"`**                              | `Serial0/1/0`,`Serial0/1/1`            | ✅ verified ISR4321 & ISR4331 |
+| 2811 / 2620XM / 2621XM  | NM (`NM-4A/S`, `NM-2FE2W`,…)     | **`"1"`**                                         | `Serial1/0..1/3`                       | ✅ verified 2811              |
+| Router-PT (generic)     | NM (`NM-*`, `PT-ROUTER-NM-*`)    | `"1"`                                             | ⚠️ non-standard ids (e.g. `Serial2/0`) | installs, odd port names      |
 
 > ⚠️ Older docstrings said NIM slots are `"0"`/`"1"` — **that was
 > wrong**; the working slot is **`"0/1"`** (chassis/subslot). HWIC = `"0/x"`, NM = `"1"`, NIM = `"0/1"`.
-> The install *mechanism* (`addModule`) is identical across routers — only the **slot string** differs
+> The install _mechanism_ (`addModule`) is identical across routers — only the **slot string** differs
 > by family. Always confirm the result with `pt_query_topology`.
 
 Prefer `pt_install_modules_batch` for multiple modules (one power-cycle); individual installs

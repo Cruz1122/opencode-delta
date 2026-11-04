@@ -152,11 +152,11 @@ For a simple repository, avoid pretending it has a grand architecture. For a com
 
 Commands must match repository evidence. Prefer a compact table when there are several:
 
-| Command | Purpose |
-| --- | --- |
-| `pnpm dev` | Start the development environment |
-| `pnpm test` | Run the test suite |
-| `pnpm build` | Build production artifacts |
+| Command      | Purpose                           |
+| ------------ | --------------------------------- |
+| `pnpm dev`   | Start the development environment |
+| `pnpm test`  | Run the test suite                |
+| `pnpm build` | Build production artifacts        |
 
 Do not include commands that merely seem conventional for the stack.
 

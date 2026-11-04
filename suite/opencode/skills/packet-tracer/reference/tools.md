@@ -6,7 +6,7 @@ Read when choosing a tool or its arguments.
 
 **Discovery / read-only:** `pt_list_devices`, `pt_get_device_details(model|alias)`, `pt_list_templates`,
 `pt_list_modules(router_model, category)`, `pt_list_projects`, `pt_load_project`, `pt_bridge_status`,
-`pt_query_topology`*, `pt_export_topology`* (*need bridge).
+`pt_query_topology`_, `pt_export_topology`_ (*need bridge).
 **Pure planning/generation:** `pt_plan_topology`, `pt_estimate_plan`, `pt_validate_plan`, `pt_fix_plan`,
 `pt_explain_plan`, `pt_generate_script(include_configs)`, `pt_generate_configs`, `pt_full_build(deploy=…)`.
 `pt_plan_topology`/`pt_full_build` accept `vlans`, `dual_stack`, `ipv6_base`, `wireless_laptops`.
@@ -61,7 +61,7 @@ class-maps and policy-maps with IOS CLI and use this to verify.
 plus PT's own per-OSI-layer explanation of each decision (same text as the GUI's PDU Details pane).
 Workflow: `pt_simulation_mode(on=True)` → generate traffic (`pt_verify_connectivity`) → `pt_read_packet_trace`.
 There is **no `pt_send_pdu`**: PT does not let an extension originate a packet the way the GUI's
-*Add Simple PDU* button does. Generate traffic with a real ping instead.
+*Add Simple PDU\* button does. Generate traffic with a real ping instead.
 **Device panel (CLI / Desktop / Services, live):** `pt_cli(device, commands)` types IOS commands
 in the router's real CLI tab one at a time, waiting for the prompt, and marks each `ok` / `ERROR` /
 `UNKNOWN COMMAND` / `WAITING FOR ANSWER` / `TIMEOUT`; `pt_host_command(host, command, inputs)` is the
@@ -81,6 +81,7 @@ tab, app, section)`, `pt_ui_capture(device)`, `pt_ui_close(device)`. When the us
 **Resources:** `pt://catalog/devices`, `/cables`, `/aliases`, `/templates`, `pt://capabilities`.
 
 ## Advanced builds (verified live 2026-06-27)
+
 - **Inter-VLAN / router-on-a-stick:** `pt_full_build(template="router_on_a_stick", vlans=3)` → N VLANs,
   trunk uplink, router `.1q` subinterfaces, one `/24` + DHCP pool per VLAN. 2960 omits trunk
   `encapsulation` (dot1q-only); 3560 emits it.
@@ -91,7 +92,7 @@ tab, app, section)`, `pt_ui_capture(device)`, `pt_ui_close(device)`. When the us
   → `Wireless0`, and adds **one `AccessPoint-PT` per LAN**, each wired to that LAN's own switch.
   ⚠️ **Wireless addressing is NOT deterministic.** Laptops auto-associate on the default SSID and
   PT exposes **no SSID API** (verified: neither the AP nor its port has `setSsid`), so with more
-  than one AP a laptop can associate to *any* of them and take a DHCP lease from **another LAN's
+  than one AP a laptop can associate to _any_ of them and take a DHCP lease from **another LAN's
   pool**. Measured on PT 9.0.1: LT10, sitting right next to its own LAN's AP, still associated to
   the LAN-1 AP and got `192.168.0.13`; only with that AP powered off did it take `192.168.4.25`.
   The planner now emits a `WIRELESS_AMBIGUOUS_ASSOCIATION` **warning** when ≥2 APs coexist.
@@ -99,16 +100,16 @@ tab, app, section)`, `pt_ui_capture(device)`, `pt_ui_close(device)`. When the us
 
 ## Recipes
 
-- *"2 routers, 2 switches, 4 PCs, DHCP, static"* → `pt_full_build(routers=2, switches_per_router=1,
-  pcs_per_lan=2, dhcp=True, routing="static", deploy=True)`.
+- _"2 routers, 2 switches, 4 PCs, DHCP, static"_ → `pt_full_build(routers=2, switches_per_router=1,
+pcs_per_lan=2, dhcp=True, routing="static", deploy=True)`.
 - 4 serial ports on R1 (2911) → `pt_install_modules_batch([{device:"R1",slot:"0/0",module:"HWIC-2T"},
-  {device:"R1",slot:"0/1",module:"HWIC-2T"}])`.
+{device:"R1",slot:"0/1",module:"HWIC-2T"}])`.
 - Block telnet to a server on R1 → `pt_apply_acl(router="R1", name_or_number="101", acl_type="extended",
-  entries=[{action:"deny",protocol:"tcp",source:"any",destination:"host 192.168.0.10",dest_port_op:"eq",
-  dest_port:23},{action:"permit",protocol:"ip",source:"any",destination:"any"}],
-  binding_interface="GigabitEthernet0/0", binding_direction="in", dry_run=True)` — preview first.
+entries=[{action:"deny",protocol:"tcp",source:"any",destination:"host 192.168.0.10",dest_port_op:"eq",
+dest_port:23},{action:"permit",protocol:"ip",source:"any",destination:"any"}],
+binding_interface="GigabitEthernet0/0", binding_direction="in", dry_run=True)` — preview first.
 - Save a router's config → `pt_cli("R1", ["enable", "copy running-config startup-config"])` (Enter on
   the filename question is automatic).
 - DHCP from a server → `pt_server_dhcp("Server0", gateway="192.168.1.1", dns="192.168.1.20",
-  start_ip="192.168.1.100", mask="24", max_users=50)` then `pt_host_ip_config("PC0", mode="dhcp")`.
+start_ip="192.168.1.100", mask="24", max_users=50)` then `pt_host_ip_config("PC0", mode="dhcp")`.
 - Read a device's ports safely → `pt_send_raw('try{var d=ipc.network().getDevice("R1");reportResult(d?d.getPorts().join(","):"missing")}catch(e){reportResult("ERR:"+e)}', wait_result=True)`.

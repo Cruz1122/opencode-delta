@@ -9,7 +9,8 @@ function score(text: string, terms: string[]) {
 }
 
 export default tool({
-  description: "Search the local project brain and return small authority-aware excerpts. Candidates are excluded by default.",
+  description:
+    "Search the local project brain and return small authority-aware excerpts. Candidates are excluded by default.",
   args: {
     query: tool.schema.string().min(1),
     includeCandidates: tool.schema.boolean().default(false),
@@ -19,7 +20,11 @@ export default tool({
   async execute(args, context) {
     const root = context.worktree || context.directory
     const brain = path.join(root, "brain")
-    try { await fs.access(brain) } catch { return JSON.stringify({ results: [], note: "No brain/ directory exists" }) }
+    try {
+      await fs.access(brain)
+    } catch {
+      return JSON.stringify({ results: [], note: "No brain/ directory exists" })
+    }
     const terms = args.query.toLowerCase().split(/\s+/).filter(Boolean)
     const ranked = []
     for (const file of await walkMarkdown(brain)) {
@@ -30,9 +35,32 @@ export default tool({
       const parsed = parseFrontmatter(text)
       const s = score(`${relative}\n${text}`, terms)
       if (s <= 0) continue
-      const status = String(parsed.meta.status ?? (relative.includes("/accepted/") ? "accepted" : relative.includes("/verified/") ? "verified" : relative.includes("/candidates/") ? "candidate" : "unspecified"))
-      const authority = status === "accepted" ? 5 : status === "verified" ? 4 : status === "inferred" ? 2 : status === "candidate" ? 1 : 3
-      const excerptIndex = Math.max(0, parsed.body.toLowerCase().search(new RegExp(terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"))))
+      const status = String(
+        parsed.meta.status ??
+          (relative.includes("/accepted/")
+            ? "accepted"
+            : relative.includes("/verified/")
+              ? "verified"
+              : relative.includes("/candidates/")
+                ? "candidate"
+                : "unspecified"),
+      )
+      const authority =
+        status === "accepted"
+          ? 5
+          : status === "verified"
+            ? 4
+            : status === "inferred"
+              ? 2
+              : status === "candidate"
+                ? 1
+                : 3
+      const excerptIndex = Math.max(
+        0,
+        parsed.body
+          .toLowerCase()
+          .search(new RegExp(terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"))),
+      )
       const excerpt = parsed.body.slice(Math.max(0, excerptIndex - 120), excerptIndex + 520).trim()
       ranked.push({ path: relative, status, authority, score: s + authority * 2, excerpt: truncate(excerpt, 700) })
     }

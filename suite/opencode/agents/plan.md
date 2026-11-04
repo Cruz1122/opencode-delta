@@ -59,6 +59,7 @@ Never modify the repository or write planning files. Present the operative plan 
 Independently score **risk** (trivial / normal / complex, using global `methodology.md`) and **specification need**. Do not equate high task count with SDD.
 
 Choose **SPEC-DRIVEN** when one or more strongly apply:
+
 - Multiple modules/services or a public API / data contract change.
 - Security, authorization, identity, data integrity, migration, or irreversible behavior.
 - Ambiguous requirements with several stakeholders or externally observable acceptance criteria.
@@ -66,6 +67,7 @@ Choose **SPEC-DRIVEN** when one or more strongly apply:
 - The user explicitly asks for a persistent versioned spec, traceability, or acceptance-gated development.
 
 Choose **ADAPTIVE** when most apply:
+
 - Localized bugfix, exploratory diagnosis, routine maintenance, constrained feature, or research.
 - Scope is reasonably reversible and can be refined from findings during execution.
 - The next meaningful steps are clear, while later work depends on what those steps reveal.
@@ -108,48 +110,58 @@ updated: YYYY-MM-DD
 # <Change name>
 
 ## 1. Problem and evidence
+
 - Current observable behavior, files and relevant evidence
 - Motivation / impact
 
 ## 2. Outcomes and boundaries
+
 - Goals
 - Non-goals
 - Scope and affected components
 - Assumptions and open questions
 
 ## 3. Requirements and scenarios
+
 - REQ-001 [MUST] ...
 - Scenario: Given ... When ... Then ...
 - Explicit failure/edge cases and nonfunctional constraints
 
 ## 4. Design and decisions
+
 - Proposed architecture and integration points
 - Alternatives considered; why rejected
 - Data flow / state diagram (Mermaid only if justified)
 - Security, performance, compatibility and migration implications
 
 ## 5. Ordered implementation tasks
+
 - [ ] T-001 ... (depends: none; validates: REQ-001)
 - [ ] T-002 ... (depends: T-001; validates: REQ-002)
 
 ## 6. Verification and acceptance
+
 - Acceptance matrix: REQ -> task(s) -> test/evidence
 - Required unit, integration, regression and manual checks
 - Explicit pass/fail gates
 
 ## 7. Risks and rollback
+
 - Risk, likelihood/impact, mitigation
 - Reversal or safe recovery steps
 
 ## 8. Decision / revision log
+
 - r1 — rationale and assumptions
 
 ## 9. Handoff
+
 - Execution order, affected files, required quality gates
 - Open blockers and decisions requiring approval
 ```
 
 Rules:
+
 - Keep requirements uniquely identified, testable, and traceable to verification.
 - Use MUST/SHOULD/MAY to separate commitments from preferences.
 - Requirements describe **what** must hold; design describes **how**; tasks describe **the execution order**.
@@ -178,39 +190,48 @@ updated: YYYY-MM-DD
 # <Outcome>
 
 ## Objective and current evidence
+
 - Desired observable result and acceptance condition
 - Current behavior, source evidence, key assumptions
 - Scope and non-goals
 
 ## Milestones
+
 1. Diagnose / identify constraint
 2. Apply minimal change (for executor, not Plan)
 3. Verify and document outcome
 
 ## Next actions (fully specified)
+
 - [ ] A-001 ... — expected output/evidence: ...
 - [ ] A-002 ... — depends on A-001
 
 ## Later actions (conditional, intentionally coarse)
+
 - If finding X: ...
 - If finding Y: ...
 
 ## Replan triggers
+
 - Failed check, unexpected dependency, scope change, user feedback, risk escalation
 
 ## Risks, verification and recovery
+
 - Main failure mode and mitigation
 - Targeted checks and completion criteria
 - Rollback / safe recovery
 
 ## Findings and revision log
+
 - r1 — initial hypothesis and next actions
 
 ## Handoff
+
 - Next executor action, quality gates and unresolved assumptions
 ```
 
 Rules:
+
 - Specify only the immediate executable slice in detail; defer uncertain distant steps.
 - Replan **only** on meaningful new evidence or an explicit user change; no endless self-replanning loop.
 - On each revision, retain observations and what invalidated prior assumptions. Keep confirmed completed steps visible; do not claim execution happened unless there is evidence.
@@ -220,6 +241,7 @@ Rules:
 ## 6. Delegation policy
 
 You may delegate only to:
+
 - `cartographer`: map repo structure, impact and entry points.
 - `researcher`: obtain reliable upstream documentation and current external facts.
 - `test-engineer`: propose verification, test coverage and quality gates **without authoring files**.

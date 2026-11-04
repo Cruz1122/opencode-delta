@@ -25,7 +25,8 @@ type State = {
 const states = new Map<string, State>()
 const now = () => new Date().toISOString()
 
-const complexPathPattern = /(auth|authorization|permission|security|crypto|payment|billing|migration|schema|database|infra|deploy|terraform|k8s|kubernetes|concurr|thread|lock|public[-_ ]?api|breaking)/i
+const complexPathPattern =
+  /(auth|authorization|permission|security|crypto|payment|billing|migration|schema|database|infra|deploy|terraform|k8s|kubernetes|concurr|thread|lock|public[-_ ]?api|breaking)/i
 
 function inferRisk(files: string[]): Risk {
   if (files.some((file) => complexPathPattern.test(file))) return "complex"
@@ -35,12 +36,17 @@ function inferRisk(files: string[]): Risk {
 }
 
 function isCritical(files: string[], qualityText: string): boolean {
-  return files.some((file) => complexPathPattern.test(file)) ||
+  return (
+    files.some((file) => complexPathPattern.test(file)) ||
     /(critical|high severity|data loss|breaking change|migration redesign|production dependency)/i.test(qualityText)
+  )
 }
 
 function textFromParts(parts: any[]): string {
-  return (parts ?? []).filter((part) => part?.type === "text").map((part) => part.text ?? "").join("\n")
+  return (parts ?? [])
+    .filter((part) => part?.type === "text")
+    .map((part) => part.text ?? "")
+    .join("\n")
 }
 
 export const WorkflowOrchestrator: Plugin = async ({ client, worktree }) => {
@@ -102,7 +108,8 @@ export const WorkflowOrchestrator: Plugin = async ({ client, worktree }) => {
 
         state.modified = true
         const candidate = output?.args?.filePath ?? output?.args?.path ?? output?.args?.file ?? input?.path
-        if (typeof candidate === "string" && !state.modifiedFiles.includes(candidate)) state.modifiedFiles.push(candidate)
+        if (typeof candidate === "string" && !state.modifiedFiles.includes(candidate))
+          state.modifiedFiles.push(candidate)
         if (state.phase === "done" || state.phase === "stopped") state.phase = "editing"
         await save(state)
       }
@@ -183,13 +190,15 @@ export const WorkflowOrchestrator: Plugin = async ({ client, worktree }) => {
           await save(state)
         }
       } catch (error) {
-        await client.app.log({
-          body: {
-            service: "workflow-orchestrator",
-            level: "warn",
-            message: `Fail-safe orchestration skipped: ${(error as Error).message}`,
-          },
-        }).catch(() => {})
+        await client.app
+          .log({
+            body: {
+              service: "workflow-orchestrator",
+              level: "warn",
+              message: `Fail-safe orchestration skipped: ${(error as Error).message}`,
+            },
+          })
+          .catch(() => {})
       }
     },
   }

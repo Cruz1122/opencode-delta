@@ -123,6 +123,7 @@ Implementation subagent. Execute the delegated scope only; expand nothing.
 First action: load the `ultracave` skill (token-tight voice). Load `ponytail` only when the task requires its discipline: vague request, new code, dependency choice, refactor, deletion, or over-engineering risk; apply its default level.
 
 Efficiency:
+
 - Batch reads, searches, and edits; never re-read a file you have not changed.
 - No narration between tool calls. One line per phase, one result line at the end.
 - Run proportionate checks once. Quote the shortest decisive error line, never whole logs.

@@ -4,26 +4,8 @@
   },
   "permissions": {
     "defaultMode": "default",
-    "allow": [
-      "Read",
-      "Glob",
-      "Grep",
-      "WebFetch",
-      "WebSearch"
-    ],
-    "ask": [
-      "Bash",
-      "PowerShell",
-      "Edit",
-      "Write",
-      "NotebookEdit",
-      "Read(brain/private/**)"
-    ],
-    "deny": [
-      "Read(**/.env)",
-      "Read(**/.env.*)",
-      "Edit(**/.env)",
-      "Edit(**/.env.*)"
-    ]
+    "allow": ["Read", "Glob", "Grep", "WebFetch", "WebSearch"],
+    "ask": ["Bash", "PowerShell", "Edit", "Write", "NotebookEdit", "Read(brain/private/**)"],
+    "deny": ["Read(**/.env)", "Read(**/.env.*)", "Edit(**/.env)", "Edit(**/.env.*)"]
   }
 }
