@@ -29,6 +29,10 @@ test.skipIf(!process.env.OPENCODE_DELTA_TEST_RELEASE_DIR)(
       ...(windows
         ? {
             SystemRoot: process.env.SystemRoot,
+            WINDIR: process.env.WINDIR,
+            ComSpec: process.env.ComSpec,
+            USERPROFILE: home,
+            APPDATA: path.join(home, "AppData/Roaming"),
             PROCESSOR_ARCHITECTURE: process.env.PROCESSOR_ARCHITECTURE,
             PROCESSOR_ARCHITEW6432: process.env.PROCESSOR_ARCHITEW6432,
             TEMP: home,
@@ -38,9 +42,12 @@ test.skipIf(!process.env.OPENCODE_DELTA_TEST_RELEASE_DIR)(
     }
     const server = Bun.serve({
       port: 0,
-      fetch(request) {
+      async fetch(request) {
         const name = path.basename(new URL(request.url).pathname)
-        return new Response(Bun.file(path.join(release, name)))
+        // Match GitHub's raw release downloads, without the platform-specific file/sendfile path.
+        return new Response(await fs.readFile(path.join(release, name)), {
+          headers: { "Content-Type": "application/octet-stream" },
+        })
       },
     })
     try {

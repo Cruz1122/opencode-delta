@@ -7,6 +7,7 @@ param(
   [switch]$UpdateClaude
 )
 $ErrorActionPreference = "Stop"
+$ProgressPreference = "SilentlyContinue"
 $userHome = if ($env:OPENCODE_TEST_HOME) { $env:OPENCODE_TEST_HOME } else { $HOME }
 $repository = if ($env:OPENCODE_DELTA_REPOSITORY) { $env:OPENCODE_DELTA_REPOSITORY } else { "Cruz1122/opencode" }
 $installDir = if ($env:OPENCODE_DELTA_INSTALL_ROOT) { Join-Path $env:OPENCODE_DELTA_INSTALL_ROOT "bin" } else { Join-Path $userHome ".local\bin" }
@@ -69,7 +70,7 @@ try {
   Invoke-WebRequest -UseBasicParsing -Uri "$base/$archive.sha256" -OutFile "$archivePath.sha256"
   $expected = ((Get-Content -LiteralPath "$archivePath.sha256" -Raw).Trim() -split "\s+")[0]
   $actual = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash
-  if ($expected -notmatch "^[a-fA-F0-9]{64}$" -or $expected -ine $actual) { throw "Checksum mismatch" }
+  if ($expected -notmatch "^[a-fA-F0-9]{64}$" -or $expected -ine $actual) { throw "Checksum mismatch: expected $expected; received $actual" }
   $types = @(& tar.exe -tvzf $archivePath)
   Check-Exit "Could not inspect archive types"
   foreach ($entry in $types) {
