@@ -31,6 +31,8 @@ test.skipIf(!process.env.OPENCODE_DELTA_TEST_RELEASE_DIR)(
             SystemRoot: process.env.SystemRoot,
             WINDIR: process.env.WINDIR,
             ComSpec: process.env.ComSpec,
+            // PowerShell uses PATHEXT to classify .exe files as native commands.
+            PATHEXT: process.env.PATHEXT,
             USERPROFILE: home,
             APPDATA: path.join(home, "AppData/Roaming"),
             PROCESSOR_ARCHITECTURE: process.env.PROCESSOR_ARCHITECTURE,
@@ -40,6 +42,7 @@ test.skipIf(!process.env.OPENCODE_DELTA_TEST_RELEASE_DIR)(
           }
         : {}),
     }
+    if (windows) expect(env.PATHEXT?.toLowerCase()).toContain(".exe")
     const server = Bun.serve({
       port: 0,
       async fetch(request) {
