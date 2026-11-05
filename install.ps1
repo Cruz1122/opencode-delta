@@ -20,8 +20,8 @@ $profileInstalled = $false
 $pathChanged = $false
 $previousUserPath = [Environment]::GetEnvironmentVariable("Path", "User")
 
-function Check-Exit([string]$Message) {
-  if ($LASTEXITCODE -ne 0) { throw "$Message (exit code: $LASTEXITCODE)" }
+function Check-Exit([string]$Message, $Code) {
+  if ($null -eq $Code -or $Code -ne 0) { throw "$Message (exit code: $Code)" }
 }
 
 function Set-UserPath([bool]$Add) {
@@ -54,7 +54,7 @@ try {
     Copy-Item -LiteralPath $helper -Destination $binary
     $action = if ($Undo) { "undo" } else { "uninstall" }
     & $binary delta profile $action --state $stateDir
-    Check-Exit "Profile removal refused or failed; inspect the reported managed file"
+    Check-Exit "Profile removal refused or failed; inspect the reported managed file" $LASTEXITCODE
     if (-not (Test-Path (Join-Path $installDir "opencode.exe")) -and -not (Test-Path (Join-Path $installDir "claude.exe"))) { Set-UserPath $false }
     Write-Host "Managed profile $action complete. Claude executable, authentication, history and backups are preserved."
     return
@@ -72,51 +72,51 @@ try {
   $actual = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash
   if ($expected -notmatch "^[a-fA-F0-9]{64}$" -or $expected -ine $actual) { throw "Checksum mismatch: expected $expected; received $actual" }
   $tarErrors = Join-Path $tempDir "tar-errors.txt"
-  # PowerShell 5 scopes LASTEXITCODE inside @(); capture native output directly.
+  # Capture output directly and pass the caller's exit status explicitly across function scopes.
   $types = & tar.exe -tvzf $archivePath 2> $tarErrors
-  Check-Exit "Could not inspect archive types: $(Get-Content -LiteralPath $tarErrors -Raw)"
+  Check-Exit "Could not inspect archive types: $(Get-Content -LiteralPath $tarErrors -Raw)" $LASTEXITCODE
   foreach ($entry in $types) {
     if (-not $entry -or $entry.Substring(0, 1) -notin @("-", "d")) { throw "Archive contains links or special files" }
   }
   $paths = & tar.exe -tzf $archivePath
-  Check-Exit "Could not inspect archive paths"
+  Check-Exit "Could not inspect archive paths" $LASTEXITCODE
   foreach ($entry in $paths) {
     if ([IO.Path]::IsPathRooted($entry) -or $entry -match "(^|[\\/])\.\.([\\/]|$)|:") { throw "Unsafe archive path: $entry" }
   }
   $bundle = Join-Path $tempDir "package"
   New-Item -ItemType Directory -Path $bundle | Out-Null
   & tar.exe -xzf $archivePath -C $bundle
-  Check-Exit "Could not extract archive"
+  Check-Exit "Could not extract archive" $LASTEXITCODE
   $binary = Join-Path $bundle "bin\opencode.exe"
   if (-not (Test-Path -LiteralPath $binary)) { throw "Release executable is missing" }
   & $binary --version
-  Check-Exit "Release executable failed to start; executable policy may block it"
+  Check-Exit "Release executable failed to start; executable policy may block it" $LASTEXITCODE
   if ($Only -ne "opencode" -and -not $SkipClaudeInstall) {
     $claudeVersion = if ($env:CLAUDE_CODE_VERSION) { $env:CLAUDE_CODE_VERSION } else { "stable" }
     $claude = Get-Command claude -ErrorAction SilentlyContinue
     $nativeClaude = Join-Path $userHome ".local\bin\claude.exe"
     if ($claude) {
-      if ($UpdateClaude) { & $claude.Source install $claudeVersion; Check-Exit "Explicit Claude update failed" }
+      if ($UpdateClaude) { & $claude.Source install $claudeVersion; Check-Exit "Explicit Claude update failed" $LASTEXITCODE }
       & $claude.Source --version
-      Check-Exit "Existing Claude executable failed to start"
+      Check-Exit "Existing Claude executable failed to start" $LASTEXITCODE
     } elseif (Test-Path -LiteralPath $nativeClaude) {
-      if ($UpdateClaude) { & $nativeClaude install $claudeVersion; Check-Exit "Explicit Claude update failed" }
+      if ($UpdateClaude) { & $nativeClaude install $claudeVersion; Check-Exit "Explicit Claude update failed" $LASTEXITCODE }
       & $nativeClaude --version
-      Check-Exit "Existing native Claude executable failed to start"
+      Check-Exit "Existing native Claude executable failed to start" $LASTEXITCODE
     } else {
       Write-Host "Installing Claude from Anthropic (separate installer; may leave its own files on failure)."
       $claudeInstaller = Join-Path $tempDir "claude-install.ps1"
       Invoke-WebRequest -UseBasicParsing -Uri "https://claude.ai/install.ps1" -OutFile $claudeInstaller
       & powershell.exe -NoProfile -NonInteractive -File $claudeInstaller $claudeVersion
-      Check-Exit "Anthropic installer failed; managed profile has not been changed"
+      Check-Exit "Anthropic installer failed; managed profile has not been changed" $LASTEXITCODE
       & $nativeClaude --version
-      Check-Exit "Native Claude executable failed to start"
+      Check-Exit "Native Claude executable failed to start" $LASTEXITCODE
     }
   }
   New-Item -ItemType Directory -Path (Split-Path $helper) -Force | Out-Null
   Copy-Item -LiteralPath $binary -Destination $helper -Force
   & $binary delta profile install --bundle $bundle --home $userHome --config $configDir --claude $claudeDir --bin $installDir --state $stateDir --only $Only
-  Check-Exit "Managed profile installation failed"
+  Check-Exit "Managed profile installation failed" $LASTEXITCODE
   $profileInstalled = $true
   Set-UserPath $true
   $pathChanged = $true

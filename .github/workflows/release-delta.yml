@@ -80,7 +80,7 @@ jobs:
           path: release
       - name: Verify native installer using Windows PowerShell
         working-directory: packages/opencode
-        run: bun test --cwd "${{ runner.temp }}" --config "${{ github.workspace }}/packages/opencode/test/installer.bunfig.toml" "${{ github.workspace }}/packages/opencode/test/installer-release.test.ts" "${{ github.workspace }}/packages/opencode/test/user-suite.test.ts"
+        run: bun test --cwd "${{ runner.temp }}" --config "${{ github.workspace }}/packages/opencode/test/installer.bunfig.toml" "${{ github.workspace }}/packages/opencode/test/installer-release.test.ts" "${{ github.workspace }}/packages/opencode/test/installer-powershell.test.ts" "${{ github.workspace }}/packages/opencode/test/user-suite.test.ts"
         env:
           OPENCODE_DELTA_TEST_RELEASE_DIR: ${{ github.workspace }}/release
 
