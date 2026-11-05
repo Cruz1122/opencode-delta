@@ -72,12 +72,13 @@ try {
   $actual = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash
   if ($expected -notmatch "^[a-fA-F0-9]{64}$" -or $expected -ine $actual) { throw "Checksum mismatch: expected $expected; received $actual" }
   $tarErrors = Join-Path $tempDir "tar-errors.txt"
-  $types = @(& tar.exe -tvzf $archivePath 2> $tarErrors)
+  # PowerShell 5 scopes LASTEXITCODE inside @(); capture native output directly.
+  $types = & tar.exe -tvzf $archivePath 2> $tarErrors
   Check-Exit "Could not inspect archive types: $(Get-Content -LiteralPath $tarErrors -Raw)"
   foreach ($entry in $types) {
     if (-not $entry -or $entry.Substring(0, 1) -notin @("-", "d")) { throw "Archive contains links or special files" }
   }
-  $paths = @(& tar.exe -tzf $archivePath)
+  $paths = & tar.exe -tzf $archivePath
   Check-Exit "Could not inspect archive paths"
   foreach ($entry in $paths) {
     if ([IO.Path]::IsPathRooted($entry) -or $entry -match "(^|[\\/])\.\.([\\/]|$)|:") { throw "Unsafe archive path: $entry" }
